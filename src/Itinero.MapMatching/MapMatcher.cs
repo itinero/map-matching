@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Itinero;
 using Itinero.Algorithms.Search;
 using Itinero.IO.Osm;
+using Itinero.IO.Json;
 using Itinero.LocalGeo;
 using Itinero.Osm.Vehicles;
 using System.Linq;
@@ -21,7 +22,12 @@ namespace Itinero.MapMatching
             _router = router;
         }
 
-        public Route Match(List<Coordinate> track)
+        public (Route, RouterPoint[]) Match(List<Coordinate> track)
+        {
+            return TryMatch(track).Value;
+        }
+
+        public Result<(Route, RouterPoint[])> TryMatch(List<Coordinate> track)
         {
             Console.WriteLine("Snapping points to road network…");
             var projection = ProjectionOnRoads(track);
@@ -32,12 +38,7 @@ namespace Itinero.MapMatching
             var startP = emitP[0];
 
             Console.WriteLine("Running Viterbi…");
-            /*(uint[], float)*/ var selected = Solver.ForwardViterbi(
-                    /*Dictionary<uint segment, float> */ startP,
-                    /*key observation Dictionary<uint from segment, Dictionary<uint to segment, float>>[]*/ transP,
-                    /*key observation Dictionary<uint segment, float>[]*/ emitP);
-
-            var (path, confidence) = selected;
+            var (path, confidence) = Solver.ForwardViterbi(startP, transP, emitP);
 
             Console.WriteLine("Done!");
             var routerPoints = new RouterPoint[path.Length];
@@ -46,13 +47,17 @@ namespace Itinero.MapMatching
                 routerPoints[i] = projection[i][(int)path[i]];
             }
 
-            // XXX Debugging stuff
-            File.WriteAllText("./data/selected_edges.geojson", routerPoints.ToGeoJson(_db));
+            var routes = new Result<Route>[routerPoints.Length - 1];
+            for (int i = 0; i < routerPoints.Length - 1; i++)
+            {
+                // calculating a route should succeed, because a route has been calculated between
+                // these points in the transition probability calculation phase.
+                // TODO TryCalculate is used because Concatenate is only defined for IEnumerable<Result<Route>>, not IEnumerable<Route>
+                routes[i] = _router.TryCalculate(_db.GetSupportedProfile("bicycle"), routerPoints[i], routerPoints[i + 1]);
+            }
 
-            var route = new Route();
-            throw new NotImplementedException("Coming soon to a computer near you");
+            return new Result<(Route, RouterPoint[])>((routes.Concatenate().Value, routerPoints));
         }
-
 
         List<RouterPoint>[] ProjectionOnRoads(List<Coordinate> track)
         {
@@ -121,7 +126,7 @@ namespace Itinero.MapMatching
             // Assign probability according to exponential distribution for each state transition
 
             // Exponential distributions have one factor: the mean (= 1/λ)
-            double mean = 0.5; // TODO
+            double mean = 5; // TODO
             // log(1/x) = -log(x), and we only need the logarithm
             float factor = (float) -Math.Log(mean);
 
@@ -130,7 +135,7 @@ namespace Itinero.MapMatching
 
             for (uint trackPointId = 0; trackPointId < projection.Length - 1; trackPointId++)
             {
-                Console.Write("\r{0}/{1}", trackPointId + 1, projection.Length - 1);
+                Console.Write("\r{0}/{1}         ", trackPointId + 1, projection.Length - 1);
 
                 transitP[trackPointId + 1] = new Dictionary<uint, Dictionary<uint, float>>();
 
@@ -143,6 +148,8 @@ namespace Itinero.MapMatching
 
                     for (uint fromPointId = 0; fromPointId < projection[trackPointId].Count; fromPointId++)
                     {
+                        Console.Write("\r{0}/{1}  {2,2} → {3,2}", trackPointId + 1, projection.Length - 1, fromPointId, toPointId);
+
                         RouterPoint fromPoint = projection[trackPointId][(int) fromPointId];
                         Coordinate fromTrackPoint = fromPoint.Location();
 
