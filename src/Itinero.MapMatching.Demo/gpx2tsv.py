@@ -26,7 +26,7 @@ def gpx2tsv(file, out=None):
 	trk = root.find(fqn_name("trk"))
 	assert trk is not None
 
-	print("\t".join(("date", "time", "lat", "lon", "hdop")), file=out)
+	print("\t".join(("# date", "time", "lat", "lon", "hdop")), file=out)
 
 	for trkseg in trk.iterfind(fqn_name("trkseg")):
 		for trkpt in trkseg.iterfind(fqn_name("trkpt")):

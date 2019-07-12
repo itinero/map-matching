@@ -31,9 +31,7 @@ namespace Itinero.MapMatching.Demo
             // do map matching.
             var matcher = new MapMatcher(router);
             var matched = matcher.Match(track);
-            var geoJson = matched.ToGeoJson();
-
-            Console.WriteLine(geoJson);
+            File.WriteAllText("./data/matched_route.geojson", matched.ToGeoJson());
         }
 
         static List<Coordinate> LoadTsv(FileStream stream)
@@ -44,6 +42,10 @@ namespace Itinero.MapMatching.Demo
             string line;
             while((line = reader.ReadLine()) != null)
             {
+                if (line[0] == '#')
+                {
+                    continue;
+                }
                 string[] fields = line.Split("\t");
                 float lat = float.Parse(fields[2]);
                 float lon = float.Parse(fields[3]);
