@@ -22,19 +22,19 @@ namespace Itinero.MapMatching
             _router = router;
         }
 
-        public (Route, RouterPoint[]) Match(List<Coordinate> track)
+        public (Route, RouterPoint[]) Match(Track track)
         {
             return TryMatch(track).Value;
         }
 
-        public Result<(Route, RouterPoint[])> TryMatch(List<Coordinate> track)
+        public Result<(Route, RouterPoint[])> TryMatch(Track track)
         {
             Console.WriteLine("Snapping points to road network…");
             var projection = ProjectionOnRoads(track);
             Console.WriteLine("Calculating emission probabilities…");
-            var emitP = EmitProbabilities(projection);
+            var emitP = EmitProbabilities(track, projection);
             Console.WriteLine("Calculating transition probabilities…");
-            var transP = TransitionProbabilities(projection);
+            var transP = TransitionProbabilities(track, projection);
             var startP = emitP[0];
 
             Console.WriteLine("Running Viterbi…");
@@ -59,22 +59,22 @@ namespace Itinero.MapMatching
             return new Result<(Route, RouterPoint[])>((routes.Concatenate().Value, routerPoints));
         }
 
-        List<RouterPoint>[] ProjectionOnRoads(List<Coordinate> track)
+        List<RouterPoint>[] ProjectionOnRoads(Track track)
         {
             /* track point, projected point */
-            var projection = new List<RouterPoint>[track.Count];
+            var projection = new List<RouterPoint>[track.Points.Count];
 
             var isAcceptable = _router.GetIsAcceptable(_db.GetSupportedProfile("bicycle"));
 
             uint id = 0;
-            foreach (Coordinate track_point in track)
+            foreach (var track_point in track.Points)
             {
-                Console.Write("\r{0}/{1}", id + 1, track.Count);
+                Console.Write("\r{0}/{1}", id + 1, track.Points.Count);
 
                 var resolve = new ResolveMultipleAlgorithm(
                         _db.Network.GeometricGraph,
-                        track_point.Latitude, track_point.Longitude,
-                        Offset(track_point, _db.Network), 200f /* meters */,
+                        track_point.Coord.Latitude, track_point.Coord.Longitude,
+                        Offset(track_point.Coord, _db.Network), 200f /* meters */,
                         isAcceptable);
                 resolve.Run();
                 projection[id] = resolve.Results;
@@ -86,7 +86,7 @@ namespace Itinero.MapMatching
             return projection;
         }
 
-        Dictionary<uint, float>[] EmitProbabilities(List<RouterPoint>[] projection)
+        Dictionary<uint, float>[] EmitProbabilities(Track track, List<RouterPoint>[] projection)
         {
             var emitP = /* key track point (observation) */ new Dictionary<uint /* segment */, float>[projection.Length];
 
@@ -119,7 +119,8 @@ namespace Itinero.MapMatching
             return emitP;
         }
 
-        Dictionary<uint, Dictionary<uint, float>>[] TransitionProbabilities(List<RouterPoint>[] projection)
+        Dictionary<uint, Dictionary<uint, float>>[] TransitionProbabilities(
+                Track track, List<RouterPoint>[] projection)
         {
             var transitP = new Dictionary<uint, Dictionary<uint, float>>[projection.Length];
 

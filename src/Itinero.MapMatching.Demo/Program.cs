@@ -23,7 +23,7 @@ namespace Itinero.MapMatching.Demo
             var router = new Router(routerDb);
 
             // load some vehicle log data.
-            List<Coordinate> track;
+            Track track;
             using (var stream = new FileInfo(args[1]).OpenRead())
             {
                 track = LoadTsv(stream);
@@ -44,10 +44,12 @@ namespace Itinero.MapMatching.Demo
 
             if (args.Length >= 3)
             {
-                var projectionLines = new Line[track.Count];
-                for (int i = 0; i < track.Count; i++)
+                var projectionLines = new Line[track.Points.Count];
+                int i = 0;
+                foreach (var point in track.Coordinates())
                 {
-                    projectionLines[i] = new Line(track[i], projection[i].LocationOnNetwork(routerDb));
+                    projectionLines[i] = new Line(point, projection[i].LocationOnNetwork(routerDb));
+                    i++;
                 }
                 using (var outFile = File.Create(args[3]))
                 using (var writer = new System.IO.StreamWriter(outFile))
@@ -64,9 +66,9 @@ namespace Itinero.MapMatching.Demo
             writer.WriteLine("Usage:\n  dotnet run -- <routerdb> <tsv gps log> [matched route output file] [projection to points output file]");
         }
 
-        static List<Coordinate> LoadTsv(FileStream stream)
+        static Track LoadTsv(FileStream stream)
         {
-            List<Coordinate> track = new List<Coordinate>();
+            var track = new List<(Coordinate, DateTime?, float?)>();
 
             using (var reader = new System.IO.StreamReader(stream))
             {
@@ -78,13 +80,22 @@ namespace Itinero.MapMatching.Demo
                         continue;
                     }
                     string[] fields = line.Split("\t");
-                    float lat = float.Parse(fields[2]);
-                    float lon = float.Parse(fields[3]);
-                    track.Add(new Coordinate(lat, lon));
+
+                    DateTime? time = fields[0].Equals("None") ? (DateTime?) null : DateTime.Parse(fields[0]);
+
+                    float lat = float.Parse(fields[1]);
+                    float lon = float.Parse(fields[2]);
+
+                    float? maybe_hdop = null;
+                    float hdop;
+                    if (!fields[3].Equals("None") && float.TryParse(fields[3], out hdop))
+                        maybe_hdop = hdop;
+
+                    track.Add((new Coordinate(lat, lon), time, maybe_hdop));
                 }
             }
 
-            return track;
+            return new Track(track);
         }
     }
 }
