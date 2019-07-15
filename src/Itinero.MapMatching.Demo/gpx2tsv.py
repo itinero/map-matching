@@ -26,25 +26,20 @@ def gpx2tsv(file, out=None):
 	trk = root.find(fqn_name("trk"))
 	assert trk is not None
 
-	print("\t".join(("# date", "time", "lat", "lon", "hdop")), file=out)
+	print("\t".join(("# time", "lat", "lon", "hdop")), file=out)
 
 	for trkseg in trk.iterfind(fqn_name("trkseg")):
 		for trkpt in trkseg.iterfind(fqn_name("trkpt")):
-			time, date = "None", "None"
-			time_date = text_of_child(trkpt, fqn_name("time"))
-			if time_date is not None:
-				time, date = time_date.strip("Z").split("T")
-			# FIXME correct time format
-
+			time = str(text_of_child(trkpt, fqn_name("time")))
 			hdop = str(text_of_child(trkpt, fqn_name("hdop")))
 
-			print("\t".join((date, time, trkpt.get("lat"), trkpt.get("lon"), hdop)), file=out)
+			print("\t".join((time, trkpt.get("lat"), trkpt.get("lon"), hdop)), file=out)
 
 
 def main():
 	if len(sys.argv) < 2 or sys.argv[1] == "-":
 		if sys.stdin.isatty():
-			print("gpx2tsv expects either a filename as first argument or GPX data on stdin", file=sys.stdout)
+			print("gpx2tsv expects either a filename as first argument or data on stdin", file=sys.stdout)
 			sys.exit(1)
 		filename = sys.stdin
 	else:
