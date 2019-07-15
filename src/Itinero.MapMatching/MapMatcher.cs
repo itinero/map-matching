@@ -157,10 +157,28 @@ namespace Itinero.MapMatching
                         Result<Route> route = _router.TryCalculate(_db.GetSupportedProfile("bicycle"), fromPoint, toPoint);
                         if (route.IsError) continue;
 
-                        float routeVsGcircDifference = Math.Abs(
-                            route.Value.TotalDistance
-                            - Coordinate.DistanceEstimateInMeter(fromTrackPoint, toTrackPoint)
-                        );
+                        float gcircDistance = Coordinate.DistanceEstimateInMeter(fromTrackPoint, toTrackPoint);
+                        float routeDistance = route.Value.TotalDistance;
+
+                        // why Abs? because routeDistance - gcircDistance may be negative if
+                        // snapped points are closer than original points
+                        float routeVsGcircDifference = Math.Abs(routeDistance - gcircDistance);
+
+                        // sanity check: disregard routes that make large detours
+                        // TODO just a guess, we should empirically test this
+                        if (routeDistance > 50.0f + gcircDistance * 5.0f) continue;
+
+                        // sanity check: disregard routes that require insane speeds
+                        DateTime? fromTime = track.Points[(int) trackPointId].Time;
+                        DateTime? toTime = track.Points[(int) trackPointId + 1].Time;
+                        if (fromTime.HasValue && toTime.HasValue)
+                        {
+                            // FIXME hardcoded for bikes
+                            // 100 km/h ≅ 27 m/s
+                            // speed = dist/time > 27 m/s  ⇔  dist > time * 27 m/s
+                            if (routeDistance > (toTime.Value - fromTime.Value).TotalSeconds * 27.77777f)
+                                continue;
+                        }
 
                         // probability = 1 / beta * Math.Exp(-0.5 * routeVsGcircDifference)
                         float logProbability = factor - 0.5f * routeVsGcircDifference;
