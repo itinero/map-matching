@@ -19,7 +19,6 @@ namespace Itinero.MapMatching.Demo
             {
                 jsonWriter.WriteOpen();
                 jsonWriter.WriteProperty("type", "Feature", true, false);
-                jsonWriter.WriteProperty("name", "Shape", true, false);
                 jsonWriter.WritePropertyName("geometry", false);
                 jsonWriter.WriteOpen();
 
