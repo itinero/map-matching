@@ -127,7 +127,7 @@ namespace Itinero.MapMatching
             // Assign probability according to exponential distribution for each state transition
 
             // Exponential distributions have one factor: the mean (= 1/λ)
-            double mean = 5; // TODO
+            double mean = 30.0; // TODO
             // log(1/x) = -log(x), and we only need the logarithm
             float factor = (float) -Math.Log(mean);
 
