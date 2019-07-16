@@ -24,9 +24,10 @@ namespace Itinero.MapMatching.Demo
 
             // load some vehicle log data.
             Track track;
-            using (var stream = new FileInfo(args[1]).OpenRead())
+            using (var inFile = File.OpenRead(args[1]))
+            using (var reader = new StreamReader(inFile))
             {
-                track = LoadTsv(stream);
+                track = TrackLoader.FromTsv(reader);
             }
 
             // do map matching.
@@ -44,15 +45,9 @@ namespace Itinero.MapMatching.Demo
 
             if (args.Length >= 3)
             {
-                var projectionLines = new Line[track.Points.Count];
-                int i = 0;
-                foreach (var point in track.Coordinates())
-                {
-                    projectionLines[i] = new Line(point, projection[i].LocationOnNetwork(routerDb));
-                    i++;
-                }
+                var projectionLines = ProjectionLines(track, projection, routerDb);
                 using (var outFile = File.Create(args[3]))
-                using (var writer = new System.IO.StreamWriter(outFile))
+                using (var writer = new StreamWriter(outFile))
                 {
                     projectionLines.WriteGeoJson(writer);
                 }
@@ -66,36 +61,16 @@ namespace Itinero.MapMatching.Demo
             writer.WriteLine("Usage:\n  dotnet run -- <routerdb> <tsv gps log> [matched route output file] [projection to points output file]");
         }
 
-        static Track LoadTsv(FileStream stream)
+        public static Line[] ProjectionLines(Track track, RouterPoint[] projection, RouterDb routerDb)
         {
-            var track = new List<(Coordinate, DateTime?, float?)>();
-
-            using (var reader = new System.IO.StreamReader(stream))
+            var projectionLines = new Line[track.Points.Count];
+            int i = 0;
+            foreach (var point in track.Coordinates())
             {
-                string line;
-                while((line = reader.ReadLine()) != null)
-                {
-                    if (line[0] == '#')
-                    {
-                        continue;
-                    }
-                    string[] fields = line.Split("\t");
-
-                    DateTime? time = fields[0].Equals("None") ? (DateTime?) null : DateTime.Parse(fields[0]);
-
-                    float lat = float.Parse(fields[1]);
-                    float lon = float.Parse(fields[2]);
-
-                    float? maybe_hdop = null;
-                    float hdop;
-                    if (!fields[3].Equals("None") && float.TryParse(fields[3], out hdop))
-                        maybe_hdop = hdop;
-
-                    track.Add((new Coordinate(lat, lon), time, maybe_hdop));
-                }
+                projectionLines[i] = new Line(point, projection[i].LocationOnNetwork(routerDb));
+                i++;
             }
-
-            return new Track(track);
+            return projectionLines;
         }
     }
 }
