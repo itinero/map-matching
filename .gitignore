@@ -53,3 +53,5 @@ test/Itinero.Test.*/*.geojson
 
 perf.data
 perf.data.old
+
+.vscode/*
