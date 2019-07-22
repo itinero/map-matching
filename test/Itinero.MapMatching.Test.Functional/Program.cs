@@ -83,6 +83,7 @@ namespace Itinero.MapMatching.Test.Functional
             // all tests.
             var tests = new[]
             {
+                Path.Combine("data", "bicycle", "simple1.json"),
                 Path.Combine("data", "bicycle", "case1-tour-taxis-fiction.json"),
                 Path.Combine("data", "bicycle", "case2-tour-taxis-fiction.json"),
             };
@@ -101,7 +102,7 @@ namespace Itinero.MapMatching.Test.Functional
                 if (!result.success)
                 {
 #if DEBUG
-                    Console.WriteLine("...FAIL!");
+                    Console.WriteLine($"...FAIL: {result.message}");
                     continue;
 #endif
                     throw new Exception($"Test failed: {result.message}");
