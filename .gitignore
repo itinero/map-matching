@@ -49,8 +49,7 @@ TestResult*.xml
 *.hgt.zip
 .idea
 .idea/*
-test/Itinero.Test.*/*.geojson
-
+test/Itinero.*.Test.*/**/*.geojson
 perf.data
 perf.data.old
 
