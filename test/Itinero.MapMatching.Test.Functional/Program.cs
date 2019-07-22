@@ -84,6 +84,7 @@ namespace Itinero.MapMatching.Test.Functional
             var tests = new[]
             {
                 Path.Combine("data", "bicycle", "case1-tour-taxis-fiction.json"),
+                Path.Combine("data", "bicycle", "case2-tour-taxis-fiction.json"),
             };
 
             // run all for them.
