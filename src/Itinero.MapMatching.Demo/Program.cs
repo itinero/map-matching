@@ -32,20 +32,20 @@ namespace Itinero.MapMatching.Demo
 
             // do map matching.
             var matcher = new MapMatcher(router);
-            var (matched, projection) = matcher.Match(track);
+            var mapMatcherResult = matcher.Match(track);
 
             if (args.Length >= 2 && args[2].Length > 0 && !args[2].Equals("-"))
             {
-                File.WriteAllText(args[2], matched.ToGeoJson());
+                File.WriteAllText(args[2], mapMatcherResult.Route.ToGeoJson());
             }
             else
             {
-                Console.WriteLine(matched.ToGeoJson());
+                Console.WriteLine(mapMatcherResult.Route.ToGeoJson());
             }
 
             if (args.Length >= 3)
             {
-                var projectionLines = ProjectionLines(track, projection, routerDb);
+                var projectionLines = mapMatcherResult.ChosenProjectionLines();
                 using (var outFile = File.Create(args[3]))
                 using (var writer = new StreamWriter(outFile))
                 {
@@ -65,9 +65,9 @@ namespace Itinero.MapMatching.Demo
         {
             var projectionLines = new Line[track.Points.Count];
             int i = 0;
-            foreach (var point in track.Coordinates())
+            foreach (var point in track.Points)
             {
-                projectionLines[i] = new Line(point, projection[i].LocationOnNetwork(routerDb));
+                projectionLines[i] = new Line(point.Coord, projection[i].LocationOnNetwork(routerDb));
                 i++;
             }
             return projectionLines;

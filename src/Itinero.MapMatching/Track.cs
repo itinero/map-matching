@@ -51,9 +51,4 @@ public class Track
     {
         get { return new ReadOnlyCollection<TrackPoint>(_points); }
     }
-
-    public IEnumerable<Coordinate> Coordinates()
-    {
-        return from point in _points select point.Coord;
-    }
 }

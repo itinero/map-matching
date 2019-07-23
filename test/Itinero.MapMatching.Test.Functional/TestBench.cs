@@ -71,7 +71,6 @@ namespace Itinero.MapMatching.Test.Functional
                 }
 
                 // check route.
-                // TODO can this be written more concisely?
                 var (route, points) = mapMatchResult.Value;
                 var routeLineString = route.ToLineString();
                 var expectedBuffered = BufferOp.Buffer(test.Expected, 0.00005);

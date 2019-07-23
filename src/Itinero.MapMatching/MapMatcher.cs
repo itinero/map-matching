@@ -22,12 +22,12 @@ namespace Itinero.MapMatching
             _router = router;
         }
 
-        public (Route, RouterPoint[]) Match(Track track)
+        public MapMatcherResult Match(Track track)
         {
             return TryMatch(track).Value;
         }
 
-        public Result<(Route, RouterPoint[])> TryMatch(Track track)
+        public Result<MapMatcherResult> TryMatch(Track track)
         {
             Console.WriteLine("Snapping points to road network…");
             var projection = ProjectionOnRoads(track);
@@ -39,24 +39,44 @@ namespace Itinero.MapMatching
 
             Console.WriteLine("Running Viterbi…");
             var (path, confidence) = Solver.ForwardViterbi(startP, transP, emitP);
-
             Console.WriteLine("Done!");
+
             var routerPoints = new RouterPoint[path.Length];
             for (uint i = 0; i < path.Length; i++)
             {
                 routerPoints[i] = projection[i][(int)path[i]];
             }
 
-            var routes = new Result<Route>[routerPoints.Length - 1];
-            for (int i = 0; i < routerPoints.Length - 1; i++)
+            var rpntLocProbs = new MapMatcherPoint[track.Points.Count][];
+            for (int i = 0; i < rpntLocProbs.Length; i++)
             {
-                // calculating a route should succeed, because a route has been calculated between
-                // these points in the transition probability calculation phase.
-                // TODO TryCalculate is used because Concatenate is only defined for IEnumerable<Result<Route>>, not IEnumerable<Route>
-                routes[i] = _router.TryCalculate(_db.GetSupportedProfile("bicycle"), routerPoints[i], routerPoints[i + 1]);
+                rpntLocProbs[i] = new MapMatcherPoint[projection[i].Count];
+                for (int j = 0; j < rpntLocProbs[i].Length; j++)
+                {
+                    var routerPoint = projection[i][j];
+                    rpntLocProbs[i][j] = new MapMatcherPoint(
+                            routerPoint,
+                            routerPoint.LocationOnNetwork(_db),
+                            emitP[i][(uint)j]);
+                }
             }
 
-            return new Result<(Route, RouterPoint[])>((routes.Concatenate().Value, routerPoints));
+            // calculating a route should succeed, because a route has been calculated between
+            // these points in the transition probability calculation phase.
+            var route = RouteThrough(routerPoints).Value;
+
+            return new Result<MapMatcherResult>(new MapMatcherResult(track, rpntLocProbs, path, route));
+        }
+
+        Result<Route> RouteThrough(RouterPoint[] points)
+        {
+            var routes = new Result<Route>[points.Length - 1];
+            for (int i = 0; i < points.Length - 1; i++)
+            {
+                routes[i] = _router.TryCalculate(_db.GetSupportedProfile("bicycle"), points[i], points[i + 1]);
+            }
+
+            return routes.Concatenate();
         }
 
         List<RouterPoint>[] ProjectionOnRoads(Track track)
