@@ -21,7 +21,7 @@ namespace Itinero.MapMatching.Test.Functional
         {
             try
             {
-                if ("bicycle".Equals(test.Profile.File))
+                if (!"bicycle".Equals(test.Profile.Name))
                 {
                     return (false, "Currently only the bicycle profile is supported in the test bench");
                 }
