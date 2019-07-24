@@ -95,7 +95,7 @@ namespace Itinero.MapMatching
                         _db.Network.GeometricGraph,
                         track_point.Coord.Latitude, track_point.Coord.Longitude,
                         Offset(track_point.Coord, _db.Network), 200f /* meters */,
-                        isAcceptable);
+                        isAcceptable, /* allow non-orthogonal projections */ true);
                 resolve.Run();
                 projection[id] = resolve.Results;
 
@@ -184,6 +184,7 @@ namespace Itinero.MapMatching
                         // snapped points are closer than original points
                         float routeVsGcircDifference = Math.Abs(routeDistance - gcircDistance);
 
+                /*
                         // sanity check: disregard routes that make large detours
                         // TODO just a guess, we should empirically test this
                         if (routeDistance > 50.0f + gcircDistance * 5.0f) continue;
@@ -199,6 +200,7 @@ namespace Itinero.MapMatching
                             if (routeDistance > (toTime.Value - fromTime.Value).TotalSeconds * 27.77777f)
                                 continue;
                         }
+                */
 
                         // probability = 1 / beta * Math.Exp(-0.5 * routeVsGcircDifference)
                         float logProbability = factor - 0.5f * routeVsGcircDifference;
