@@ -75,20 +75,20 @@ namespace Itinero.MapMatching.Test.Functional
                 var route = mapMatchResult.Value.Route;
                 var points = mapMatchResult.Value.ChosenProjectionPoints;
                 var routeLineString = route.ToLineString();
-                var expectedBuffered = BufferOp.Buffer(test.Expected, 0.0005);
+                var expectedBuffered = BufferOp.Buffer(test.Expected, 0.00005);
                 if (!expectedBuffered.Covers(routeLineString))
                 {
                     File.WriteAllText(test.TrackFile + ".failed.geojson",
                         BuildErrorOutput(route, points, expectedBuffered, track).ToGeoJson());
                     return (false, "Route outside of expected buffer.");
                 }
-                #if DEBUG
+#if DEBUG
                 else
                 {
                     File.WriteAllText(test.TrackFile + ".expected.geojson",
                         BuildErrorOutput(route, points, expectedBuffered, track).ToGeoJson());
                 }
-                #endif
+#endif
 
                 return (true, string.Empty);
             }
