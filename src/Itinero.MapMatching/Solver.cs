@@ -7,19 +7,19 @@ namespace Itinero.MapMatching
 {
     class Solver
     {
-        public static (uint[], float) ForwardViterbi(
-                Dictionary<uint /* state */, float> startProbs,
-                /* key: observation */ Dictionary<uint /* to state */, Dictionary<uint /* from state */, float>>[] transProbs,
-                /* key: observation */ Dictionary<uint /* state */, float>[] emitProbs)
+        public static (int[], float) ForwardViterbi(
+                Dictionary<int /* state */, float> startProbs,
+                /* key: observation */ Dictionary<int /* to state */, Dictionary<int /* from state */, float>>[] transProbs,
+                /* key: observation */ Dictionary<int /* state */, float>[] emitProbs)
         {
-            uint numObs = (uint)emitProbs.LongLength;
+            int numObs = emitProbs.Length;
 
-            //                               ↓ observation    ↓ state
-            var probs      = new Dictionary<uint, Dictionary<uint, float>>();
-            var prevStates = new Dictionary<uint, Dictionary<uint, uint >>();
+            //                               ↓ observation   ↓ state
+            var probs      = new Dictionary<int, Dictionary<int, float>>();
+            var prevStates = new Dictionary<int, Dictionary<int, int>>();
 
-            probs.Add(0, new Dictionary<uint, float>());
-            prevStates.Add(0, new Dictionary<uint, uint>());
+            probs.Add(0, new Dictionary<int, float>());
+            prevStates.Add(0, new Dictionary<int, int>());
             foreach (var item in startProbs)
             {
                 var state     = item.Key;
@@ -29,25 +29,25 @@ namespace Itinero.MapMatching
             }
 
             // skip first observation because it has no predecessor
-            for (uint observation = 1; observation < numObs; observation++)
+            for (int observation = 1; observation < numObs; observation++)
             {
-                probs.Add(observation, new Dictionary<uint, float>());
-                prevStates.Add(observation, new Dictionary<uint, uint>());
+                probs.Add(observation, new Dictionary<int, float>());
+                prevStates.Add(observation, new Dictionary<int, int>());
                 foreach (var item in emitProbs[observation])
                 {
-                    uint state = item.Key;
+                    int state = item.Key;
                     float emitProb = item.Value;
 
                     Console.WriteLine("obs {0,4}   state {1,4}", observation, state);
 
-                    uint argmax = 0; // to determine: best predecessor…
+                    int argmax = 0; // to determine: best predecessor…
                     float max = float.NegativeInfinity; // …and probability of the sequence if we choose that predecessor
 
                     var stateToStateToProb = transProbs[observation];
                     var stateToProb = stateToStateToProb[state];
                     foreach (var item2 in stateToProb)
                     {
-                        uint prevState = item2.Key;
+                        int prevState = item2.Key;
                         float transProb = item2.Value;
 
                         float prevStateProb = probs[observation - 1][prevState];
@@ -68,12 +68,12 @@ namespace Itinero.MapMatching
             }
 
             // determine most probable path
-            uint lastObs = numObs - 1;
-            uint mostProbableEndpoint = 0;
+            int lastObs = numObs - 1;
+            int mostProbableEndpoint = 0;
             float mostProbableProb = float.NegativeInfinity;
             foreach (var item in probs[lastObs])
             {
-                uint state = item.Key;
+                int state = item.Key;
                 float prob = item.Value;
 
                 if (prob > mostProbableProb)
@@ -84,9 +84,9 @@ namespace Itinero.MapMatching
             }
 
             // backtrack: build most probable path
-            var path = new uint[numObs];
+            var path = new int[numObs];
             path[lastObs] = mostProbableEndpoint;
-            for (uint observation = lastObs; observation > 0; observation--)
+            for (int observation = lastObs; observation > 0; observation--)
             {
                 path[observation - 1] = prevStates[observation][path[observation]];
             }

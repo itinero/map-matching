@@ -26,27 +26,27 @@ namespace Itinero.MapMatching
         /// <summary>Outermost array: per source point. Innermost array: per possible
         /// projection.</summary>
         public MapMatcherPoint[][] ProjectionPoints { get; }
-        public uint[] ChosenIndices { get; }
+        public int[] ChosenIndices { get; }
         public MapMatcherPoint[] ChosenProjectionPoints { get; }
 
 
         public MapMatcherResult(
                 Track source,
                 MapMatcherPoint[][] projectionPoints,
-                uint[] chosenIndices,
+                int[] chosenIndices,
                 Route route)
         {
             Source = source;
 
             Route = route;
             ProjectionPoints = TwoDClone(projectionPoints);
-            ChosenIndices = new uint[chosenIndices.Length];
+            ChosenIndices = new int[chosenIndices.Length];
             Array.Copy(chosenIndices, 0, ChosenIndices, 0, chosenIndices.Length);
 
             ChosenProjectionPoints = new MapMatcherPoint[ProjectionPoints.Length];
             for (int i = 0; i < ProjectionPoints.Length; i++)
             {
-                ChosenProjectionPoints[i] = ProjectionPoints[i][(int)ChosenIndices[i]];
+                ChosenProjectionPoints[i] = ProjectionPoints[i][ChosenIndices[i]];
             }
         }
 
@@ -75,7 +75,7 @@ namespace Itinero.MapMatching
                 for (int j = 0; j < ProjectionPoints[i].Length; j++)
                 {
                     var projection = ProjectionPoints[i][j];
-                    bool chosen = (uint)j == ChosenIndices[i];
+                    bool chosen = j == ChosenIndices[i];
                     lines.Add((new Line(point.Coord, projection.Coord), projection.Probability, chosen));
                 }
             }

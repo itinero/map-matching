@@ -43,9 +43,9 @@ namespace Itinero.MapMatching
             Console.WriteLine("Done!");
 
             var routerPoints = new RouterPoint[path.Length];
-            for (uint i = 0; i < path.Length; i++)
+            for (int i = 0; i < path.Length; i++)
             {
-                routerPoints[i] = projection[i][(int)path[i]];
+                routerPoints[i] = projection[i][path[i]];
             }
 
             var rpntLocProbs = new MapMatcherPoint[track.Points.Count][];
@@ -58,7 +58,7 @@ namespace Itinero.MapMatching
                     rpntLocProbs[i][j] = new MapMatcherPoint(
                             routerPoint,
                             routerPoint.LocationOnNetwork(_db),
-                            emitP[i][(uint)j]);
+                            emitP[i][j]);
                 }
             }
 
@@ -106,9 +106,9 @@ namespace Itinero.MapMatching
             return projection;
         }
 
-        Dictionary<uint, float>[] EmitProbabilities(Track track, List<RouterPoint>[] projection)
+        Dictionary<int, float>[] EmitProbabilities(Track track, List<RouterPoint>[] projection)
         {
-            var emitP = /* key track point (observation) */ new Dictionary<uint /* segment */, float>[projection.Length];
+            var emitP = /* key track point (observation) */ new Dictionary<int /* segment */, float>[projection.Length];
 
             // Assign probability according to zero-mean Gaussian distribution for each point
 
@@ -117,11 +117,11 @@ namespace Itinero.MapMatching
             // log(1/x) = -log(x), and we only need the logarithm
             float factor = (float) -Math.Log(Math.Sqrt(2 * Math.PI) * measurement_standard_deviation);
 
-            for (uint trackPointId = 0; trackPointId < projection.Length; trackPointId++)
+            for (int trackPointId = 0; trackPointId < projection.Length; trackPointId++)
             {
-                emitP[trackPointId] = new Dictionary<uint, float>();
+                emitP[trackPointId] = new Dictionary<int, float>();
 
-                uint routerPointId = 0;
+                int routerPointId = 0;
                 foreach (RouterPoint resolvedPoint in projection[trackPointId])
                 {
                     Coordinate origLoc     = resolvedPoint.Location();
@@ -139,10 +139,10 @@ namespace Itinero.MapMatching
             return emitP;
         }
 
-        Dictionary<uint, Dictionary<uint, float>>[] TransitionProbabilities(
+        Dictionary<int, Dictionary<int, float>>[] TransitionProbabilities(
                 Track track, List<RouterPoint>[] projection)
         {
-            var transitP = new Dictionary<uint, Dictionary<uint, float>>[projection.Length];
+            var transitP = new Dictionary<int, Dictionary<int, float>>[projection.Length];
 
             // Assign probability according to exponential distribution for each state transition
 
@@ -153,11 +153,11 @@ namespace Itinero.MapMatching
 
             // These nested loops iterate over each track point in `projection` together with their successor
 
-            for (uint trackPointId = 0; trackPointId < projection.Length - 1; trackPointId++)
+            for (int trackPointId = 0; trackPointId < projection.Length - 1; trackPointId++)
             {
                 Console.Write("\r{0}/{1}", trackPointId + 1, projection.Length - 1);
 
-                transitP[trackPointId + 1] = new Dictionary<uint, Dictionary<uint, float>>();
+                transitP[trackPointId + 1] = new Dictionary<int, Dictionary<int, float>>();
 
                 var profile = Vehicle.Bicycle.Shortest();
                 var sources = projection[trackPointId].ToArray();
@@ -181,14 +181,14 @@ namespace Itinero.MapMatching
                 else if (failedTargets.Count > 0) Console.Error.WriteLine();
                 if (failedTargets.Count > 0) Console.Error.WriteLine($"  Warning: Has {failedTargets.Count}/{targets.Length} failed targets");
 
-                Coordinate fromTrackPoint = track.Points[(int) trackPointId].Coord;
-                Coordinate toTrackPoint = track.Points[(int) trackPointId + 1].Coord;
+                Coordinate fromTrackPoint = track.Points[trackPointId].Coord;
+                Coordinate toTrackPoint = track.Points[trackPointId + 1].Coord;
 
-                for (uint toRouterPointId = 0; toRouterPointId < projection[trackPointId + 1].Count; toRouterPointId++)
+                for (int toRouterPointId = 0; toRouterPointId < projection[trackPointId + 1].Count; toRouterPointId++)
                 {
-                    transitP[trackPointId + 1].Add(toRouterPointId, new Dictionary<uint, float>());
+                    transitP[trackPointId + 1].Add(toRouterPointId, new Dictionary<int, float>());
 
-                    for (uint fromRouterPointId = 0; fromRouterPointId < projection[trackPointId].Count; fromRouterPointId++)
+                    for (int fromRouterPointId = 0; fromRouterPointId < projection[trackPointId].Count; fromRouterPointId++)
                     {
                         float routeDistance = weights.Value[fromRouterPointId][toRouterPointId];
                         if (routeDistance == float.MaxValue) continue;
@@ -205,8 +205,8 @@ namespace Itinero.MapMatching
                         if (routeDistance > 50.0f + gcircDistance * 5.0f) continue;
 
                         // sanity check: disregard routes that require insane speeds
-                        DateTime? fromTime = track.Points[(int) trackPointId].Time;
-                        DateTime? toTime = track.Points[(int) trackPointId + 1].Time;
+                        DateTime? fromTime = track.Points[trackPointId].Time;
+                        DateTime? toTime = track.Points[trackPointId + 1].Time;
                         if (fromTime.HasValue && toTime.HasValue)
                         {
                             // FIXME hardcoded for bikes
