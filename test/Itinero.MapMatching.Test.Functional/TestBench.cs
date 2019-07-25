@@ -72,21 +72,20 @@ namespace Itinero.MapMatching.Test.Functional
                 }
 
                 // check route.
-                var route = mapMatchResult.Value.Route;
-                var points = mapMatchResult.Value.ChosenProjectionPoints;
-                var routeLineString = route.ToLineString();
+                MapMatcherResult result = mapMatchResult.Value;
+                var routeLineString = result.Route.ToLineString();
                 var expectedBuffered = BufferOp.Buffer(test.Expected, 0.000005);
                 if (!expectedBuffered.Covers(routeLineString))
                 {
                     File.WriteAllText(test.TrackFile + ".failed.geojson",
-                        BuildErrorOutput(route, points, expectedBuffered, track).ToGeoJson());
+                        BuildErrorOutput(result.Route, result.ChosenProjectionPoints, expectedBuffered, track).ToGeoJson());
                     return (false, "Route outside of expected buffer.");
                 }
                 #if DEBUG
                 else
                 {
                     File.WriteAllText(test.TrackFile + ".expected.geojson",
-                        BuildErrorOutput(route, points, expectedBuffered, track).ToGeoJson());
+                        BuildErrorOutput(result.Route, result.ChosenProjectionPoints, expectedBuffered, track).ToGeoJson());
                 }
                 #endif
 
@@ -112,8 +111,8 @@ namespace Itinero.MapMatching.Test.Functional
                 coordinates.Add(new Coordinate(point.Coord.Longitude, point.Coord.Latitude));
             }
             var lineString = new LineString(coordinates.ToArray());
-            features.Add(new Feature(lineString, new AttributesTable{{ "type", "track "}}));
-            
+            features.Add(new Feature(lineString, new AttributesTable{{ "type", "track"}}));
+
             features.Add(new Feature(buffer, new AttributesTable{{"type", "buffer"}}));
 
             return features;
