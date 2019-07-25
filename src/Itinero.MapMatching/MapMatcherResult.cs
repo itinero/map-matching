@@ -26,7 +26,7 @@ namespace Itinero.MapMatching
         /// <summary>Outermost array: per source point. Innermost array: per possible
         /// projection.</summary>
         public MapMatcherPoint[][] ProjectionPoints { get; }
-        public int[] ChosenIndices { get; }
+        public uint[] ChosenIndices { get; }
         public MapMatcherPoint[] ChosenProjectionPoints { get; }
 
 
@@ -40,7 +40,7 @@ namespace Itinero.MapMatching
 
             Route = route;
             ProjectionPoints = TwoDClone(projectionPoints);
-            ChosenIndices = new int[chosenIndices.Length];
+            ChosenIndices = new uint[chosenIndices.Length];
             Array.Copy(chosenIndices, 0, ChosenIndices, 0, chosenIndices.Length);
 
             ChosenProjectionPoints = new MapMatcherPoint[ProjectionPoints.Length];

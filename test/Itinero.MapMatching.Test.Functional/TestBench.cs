@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using GeoAPI.Geometries;
 using Itinero;
 using Itinero.Geo;
 using Itinero.IO.Osm;
-using Itinero.LocalGeo;
 using Itinero.MapMatching;
 using Itinero.MapMatching.Test.Functional.Domain;
 using Itinero.Osm.Vehicles;
+using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Operation.Buffer;
 using NetTopologySuite.Operation.Valid;
@@ -74,12 +75,20 @@ namespace Itinero.MapMatching.Test.Functional
                 var route = mapMatchResult.Value.Route;
                 var points = mapMatchResult.Value.ChosenProjectionPoints;
                 var routeLineString = route.ToLineString();
-                var expectedBuffered = BufferOp.Buffer(test.Expected, 0.00005);
+                var expectedBuffered = BufferOp.Buffer(test.Expected, 0.0005);
                 if (!expectedBuffered.Covers(routeLineString))
                 {
-                    File.WriteAllText(test.OsmDataFile + ".failed.geojson", routeLineString.ToGeoJson());
+                    File.WriteAllText(test.OsmDataFile + ".failed.geojson",
+                        BuildErrorOutput(route, points, expectedBuffered, track).ToGeoJson());
                     return (false, "Route outside of expected buffer.");
                 }
+                #if DEBUG
+                else
+                {
+                    File.WriteAllText(test.OsmDataFile + ".expected.geojson",
+                        BuildErrorOutput(route, points, expectedBuffered, track).ToGeoJson());
+                }
+                #endif
 
                 return (true, string.Empty);
             }
@@ -87,6 +96,27 @@ namespace Itinero.MapMatching.Test.Functional
             {
                 return (false, e.ToString());
             }
+        }
+
+        private static FeatureCollection BuildErrorOutput(Route route, IEnumerable<MapMatcherPoint> points, IGeometry buffer,
+            Track track)
+        {
+            var features = new FeatureCollection();
+
+            features.Add(new Feature(route.ToLineString(), 
+                new AttributesTable {{"type", "route"}}));
+
+            var coordinates = new List<Coordinate>();
+            foreach (var point in points)
+            {
+                coordinates.Add(new Coordinate(point.Coord.Longitude, point.Coord.Latitude));
+            }
+            var lineString = new LineString(coordinates.ToArray());
+            features.Add(new Feature(lineString, new AttributesTable{{ "type", "track "}}));
+            
+            features.Add(new Feature(buffer, new AttributesTable{{"type", "buffer"}}));
+
+            return features;
         }
     }
 }
