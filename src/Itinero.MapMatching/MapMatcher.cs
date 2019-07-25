@@ -159,9 +159,9 @@ namespace Itinero.MapMatching
 
                 transitP[trackPointId + 1] = new Dictionary<uint, Dictionary<uint, float>>();
 
+                var profile = Vehicle.Bicycle.Shortest();
                 var sources = projection[trackPointId].ToArray();
                 var targets = projection[trackPointId + 1].ToArray();
-                var profile = _db.GetSupportedProfile("bicycle");
                 var failedSources = new HashSet<int>();
                 var failedTargets = new HashSet<int>();
 
@@ -181,20 +181,39 @@ namespace Itinero.MapMatching
                 else if (failedTargets.Count > 0) Console.Error.WriteLine();
                 if (failedTargets.Count > 0) Console.Error.WriteLine($"  Warning: Has {failedTargets.Count}/{targets.Length} failed targets");
 
-                for (uint toPointId = 0; toPointId < projection[trackPointId + 1].Count; toPointId++)
+                Coordinate fromTrackPoint = track.Points[(int) trackPointId].Coord;
+                Coordinate toTrackPoint = track.Points[(int) trackPointId + 1].Coord;
+
+                for (uint toRouterPointId = 0; toRouterPointId < projection[trackPointId + 1].Count; toRouterPointId++)
                 {
-                    RouterPoint toPoint = projection[trackPointId + 1][(int) toPointId];
-                    Coordinate toTrackPoint = toPoint.Location();
+                    transitP[trackPointId + 1].Add(toRouterPointId, new Dictionary<uint, float>());
 
-                    transitP[trackPointId + 1].Add(toPointId, new Dictionary<uint, float>());
-
-                    for (uint fromPointId = 0; fromPointId < projection[trackPointId].Count; fromPointId++)
+                    for (uint fromRouterPointId = 0; fromRouterPointId < projection[trackPointId].Count; fromRouterPointId++)
                     {
-                        RouterPoint fromPoint = projection[trackPointId][(int) fromPointId];
-                        Coordinate fromTrackPoint = fromPoint.Location();
+                        float routeDistance = weights.Value[fromRouterPointId][toRouterPointId];
+
+                        var individualRoute = _router.TryCalculate(profile,
+                                projection[(int) trackPointId][(int) fromRouterPointId],
+                                projection[(int) trackPointId + 1][(int) toRouterPointId]);
+
+                        if (individualRoute.IsError && routeDistance != float.MaxValue)
+                        {
+                            Console.Error.WriteLine($" error: matrix has route but individually calculating it fails");
+                            continue;
+                        }
+                        if (!individualRoute.IsError && routeDistance == float.MaxValue)
+                        {
+                            Console.Error.WriteLine($" error: individually calculating route fails but matrix has route");
+                            continue;
+                        }
+                        if (routeDistance == float.MaxValue) continue;
+                        float individualDistance = individualRoute.Value.TotalDistance;
+                        if (Math.Abs(individualDistance - routeDistance) > 0.01f)
+                        {
+                            Console.Error.WriteLine($" individually calculated route {individualDistance}m, route in matrix {routeDistance}m");
+                        }
 
                         float gcircDistance = Coordinate.DistanceEstimateInMeter(fromTrackPoint, toTrackPoint);
-                        float routeDistance = weights.Value[fromPointId][toPointId];
 
                         // why Abs? because routeDistance - gcircDistance may be negative if
                         // snapped points are closer than original points
@@ -221,7 +240,7 @@ namespace Itinero.MapMatching
                         // probability = 1 / beta * Math.Exp(-0.5 * routeVsGcircDifference)
                         float logProbability = factor - 0.5f * routeVsGcircDifference;
 
-                        transitP[trackPointId + 1][toPointId].Add(fromPointId, logProbability);
+                        transitP[trackPointId + 1][toRouterPointId].Add(fromRouterPointId, logProbability);
                     }
                 }
             }
