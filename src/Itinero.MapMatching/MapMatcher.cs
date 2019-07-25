@@ -191,27 +191,7 @@ namespace Itinero.MapMatching
                     for (uint fromRouterPointId = 0; fromRouterPointId < projection[trackPointId].Count; fromRouterPointId++)
                     {
                         float routeDistance = weights.Value[fromRouterPointId][toRouterPointId];
-
-                        var individualRoute = _router.TryCalculate(profile,
-                                projection[(int) trackPointId][(int) fromRouterPointId],
-                                projection[(int) trackPointId + 1][(int) toRouterPointId]);
-
-                        if (individualRoute.IsError && routeDistance != float.MaxValue)
-                        {
-                            Console.Error.WriteLine($" error: matrix has route but individually calculating it fails");
-                            continue;
-                        }
-                        if (!individualRoute.IsError && routeDistance == float.MaxValue)
-                        {
-                            Console.Error.WriteLine($" error: individually calculating route fails but matrix has route");
-                            continue;
-                        }
                         if (routeDistance == float.MaxValue) continue;
-                        float individualDistance = individualRoute.Value.TotalDistance;
-                        if (Math.Abs(individualDistance - routeDistance) > 0.01f)
-                        {
-                            Console.Error.WriteLine($" individually calculated route {individualDistance}m, route in matrix {routeDistance}m");
-                        }
 
                         float gcircDistance = Coordinate.DistanceEstimateInMeter(fromTrackPoint, toTrackPoint);
 
