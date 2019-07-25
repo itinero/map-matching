@@ -8,6 +8,7 @@ using Itinero.IO.Json;
 using Itinero.LocalGeo;
 using Itinero.Osm.Vehicles;
 using System.Linq;
+using Itinero.Algorithms.Weights;
 
 namespace Itinero.MapMatching
 {
@@ -86,20 +87,19 @@ namespace Itinero.MapMatching
 
             var isAcceptable = _router.GetIsAcceptable(_db.GetSupportedProfile("bicycle"));
 
-            uint id = 0;
-            foreach (var track_point in track.Points)
+            for (int id = 0; id < track.Points.Count; id++)
             {
                 Console.Write("\r{0}/{1}", id + 1, track.Points.Count);
 
                 var resolve = new ResolveMultipleAlgorithm(
                         _db.Network.GeometricGraph,
-                        track_point.Coord.Latitude, track_point.Coord.Longitude,
-                        Offset(track_point.Coord, _db.Network), 200f /* meters */,
+                        track.Points[id].Coord.Latitude, track.Points[id].Coord.Longitude,
+                        Offset(track.Points[id].Coord, _db.Network), 100f /* meters */,
                         isAcceptable, /* allow non-orthogonal projections */ true);
                 resolve.Run();
-                projection[id] = resolve.Results;
 
-                id++;
+                var points = resolve.HasSucceeded ? resolve.Results : new List<RouterPoint>();
+                projection[id] = /*UniqueLocations(*/points/*)*/;
             }
             Console.WriteLine();
 
@@ -152,13 +152,34 @@ namespace Itinero.MapMatching
             float factor = (float) -Math.Log(mean);
 
             // These nested loops iterate over each track point in `projection` together with their successor
-            // TODO Find a cleaner way to do this
 
             for (uint trackPointId = 0; trackPointId < projection.Length - 1; trackPointId++)
             {
-                Console.Write("\r{0}/{1}         ", trackPointId + 1, projection.Length - 1);
+                Console.Write("\r{0}/{1}", trackPointId + 1, projection.Length - 1);
 
                 transitP[trackPointId + 1] = new Dictionary<uint, Dictionary<uint, float>>();
+
+                var sources = projection[trackPointId].ToArray();
+                var targets = projection[trackPointId + 1].ToArray();
+                var profile = _db.GetSupportedProfile("bicycle");
+                var failedSources = new HashSet<int>();
+                var failedTargets = new HashSet<int>();
+
+                Result<float[][]> weights = _router.TryCalculateWeight(
+                        profile, _router.GetDefaultWeightHandler(profile),
+                        sources, targets,
+                        failedSources, failedTargets);
+
+                if (weights.IsError)
+                {
+                    Console.WriteLine($" error while calculating routes: {weights.ErrorMessage}");
+                    continue;
+                }
+
+                Console.Write(" ok");
+                if (failedSources.Count > 0) Console.Error.WriteLine($"\n  Warning: Has {failedSources.Count}/{sources.Length} failed sources");
+                else if (failedTargets.Count > 0) Console.Error.WriteLine();
+                if (failedTargets.Count > 0) Console.Error.WriteLine($"  Warning: Has {failedTargets.Count}/{targets.Length} failed targets");
 
                 for (uint toPointId = 0; toPointId < projection[trackPointId + 1].Count; toPointId++)
                 {
@@ -169,16 +190,11 @@ namespace Itinero.MapMatching
 
                     for (uint fromPointId = 0; fromPointId < projection[trackPointId].Count; fromPointId++)
                     {
-                        Console.Write("\r{0}/{1}  {2,2} → {3,2}", trackPointId + 1, projection.Length - 1, fromPointId, toPointId);
-
                         RouterPoint fromPoint = projection[trackPointId][(int) fromPointId];
                         Coordinate fromTrackPoint = fromPoint.Location();
 
-                        Result<Route> route = _router.TryCalculate(_db.GetSupportedProfile("bicycle"), fromPoint, toPoint);
-                        if (route.IsError) continue;
-
                         float gcircDistance = Coordinate.DistanceEstimateInMeter(fromTrackPoint, toTrackPoint);
-                        float routeDistance = route.Value.TotalDistance;
+                        float routeDistance = weights.Value[fromPointId][toPointId];
 
                         // why Abs? because routeDistance - gcircDistance may be negative if
                         // snapped points are closer than original points
@@ -224,5 +240,45 @@ namespace Itinero.MapMatching
             return System.Math.Max(latitudeOffset, longitudeOffset);
         }
 
+
+        private static void Write2DArray<T>(T[][] array)
+        {
+            foreach (var row in array)
+            {
+                foreach (var cell in row)
+                {
+                    Console.Write($"{cell} ");
+                }
+                Console.WriteLine();
+            }
+        }
+
+        private static List<RouterPoint> UniqueLocations(List<RouterPoint> points)
+        {
+            var uniquePoints = new List<RouterPoint>();
+            for (int i = 0; i < points.Count; i++)
+            {
+                Func<RouterPoint, bool> closeBy = seenPoint =>
+                    Math.Abs(points[i].Location().Latitude  - seenPoint.Location().Latitude)  <= 0.000001f &&
+                    Math.Abs(points[i].Location().Longitude - seenPoint.Location().Longitude) <= 0.000001f;
+                if (!Any(closeBy, uniquePoints))
+                {
+                    uniquePoints.Add(points[i]);
+                }
+            }
+            return uniquePoints;
+        }
+
+        private static bool Any<T>(Func<T, bool> f, IEnumerable<T> collection)
+        {
+            foreach (var item in collection)
+            {
+                if (f(item))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

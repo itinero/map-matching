@@ -46,7 +46,7 @@ namespace Itinero.MapMatching
             ChosenProjectionPoints = new MapMatcherPoint[ProjectionPoints.Length];
             for (int i = 0; i < ProjectionPoints.Length; i++)
             {
-                ChosenProjectionPoints[i] = ProjectionPoints[i][ChosenIndices[i]];
+                ChosenProjectionPoints[i] = ProjectionPoints[i][(int)ChosenIndices[i]];
             }
         }
 
@@ -75,7 +75,7 @@ namespace Itinero.MapMatching
                 for (int j = 0; j < ProjectionPoints[i].Length; j++)
                 {
                     var projection = ProjectionPoints[i][j];
-                    bool chosen = j == ChosenIndices[i];
+                    bool chosen = (uint)j == ChosenIndices[i];
                     lines.Add((new Line(point.Coord, projection.Coord), projection.Probability, chosen));
                 }
             }
