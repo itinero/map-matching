@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!--<TargetFramework>netstandard2.0</TargetFramework>-->
@@ -6,9 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\routing\src\Itinero\Itinero.csproj" />
-    <ProjectReference Include="..\..\..\routing\src\Itinero.Geo\Itinero.Geo.csproj" />
-    <ProjectReference Include="..\..\..\routing\src\Itinero.IO.Osm\Itinero.IO.Osm.csproj" />
+    <PackageReference Include="Itinero.IO.Osm" Version="1.6.0-pre007" />
   </ItemGroup>
 
 </Project>

@@ -71,7 +71,8 @@ namespace Itinero.MapMatching.Test.Functional
                 }
 
                 // check route.
-                var (route, points) = mapMatchResult.Value;
+                var route = mapMatchResult.Value.Route;
+                var points = mapMatchResult.Value.ChosenProjectionPoints;
                 var routeLineString = route.ToLineString();
                 var expectedBuffered = BufferOp.Buffer(test.Expected, 0.00005);
                 if (!expectedBuffered.Covers(routeLineString))

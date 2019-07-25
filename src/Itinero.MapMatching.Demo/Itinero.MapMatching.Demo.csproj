@@ -6,9 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\routing\src\Itinero\Itinero.csproj"/>
-    <ProjectReference Include="..\..\..\routing\src\Itinero.Geo\Itinero.Geo.csproj"/>
-    <ProjectReference Include="..\..\..\routing\src\Itinero.IO.Osm\Itinero.IO.Osm.csproj"/>
     <ProjectReference Include="..\Itinero.MapMatching\Itinero.MapMatching.csproj"/>
   </ItemGroup>
 
