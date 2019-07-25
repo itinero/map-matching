@@ -47,12 +47,10 @@ namespace Itinero.MapMatching.Test.Functional
                 File.WriteAllText(test.OsmDataFile + ".geojson", routerDb.GetGeoJson());
 #endif
 
-                Console.Write($" {test.Profile.Name}");
-
                 // contract if needed.
                 if (test.Profile.Contract)
                 {
-                    routerDb.AddContracted(routerDb.GetSupportedProfile(test.Profile.Name));
+                    routerDb.AddContracted(Vehicle.Bicycle.Shortest());
                 }
 
                 // test route.
