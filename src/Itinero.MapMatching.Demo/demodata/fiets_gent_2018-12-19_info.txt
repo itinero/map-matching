@@ -1,0 +1,14 @@
+This track was collected on a trip by bike while surveying for OpenStreetMap.
+
+The track starts fairly easy but there are a few challenges later on:
+- It goes through a road that is mapped as oneway in OpenStreetMap at the time of writing
+  (2019-07-27). (This may be a data error in OSM, we might survey and correct that in the future).
+- The person dismounted and crossed on foot near Oktrooiplein where cycling wasn't allowed.
+- He used roads mapped with access=private that looked "public enough".
+- He dismounted and walked on the railway platform of Gent-Dampoort station.
+
+The data points sometimes appear to reverse at junctions, which is an extra challenge if a logical
+route is desired, and not just a collection of edges that were visited. The trip contains a few
+legitimate U-turns, so just disallowing those will provide an inaccurate result.
+
+This makes it an interesting and challenging test for mapmatching algorithms.
