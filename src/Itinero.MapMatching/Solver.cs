@@ -5,14 +5,20 @@ using System.Text;
 
 namespace Itinero.MapMatching
 {
+    public delegate float[][] TransitionProbabilities(int fromObservation, int toObservation);
+
     class Solver
     {
         public static (int[], float) ForwardViterbi(
-                Dictionary<int /* state */, float> startProbs,
-                /* key: observation */ Dictionary<int /* to state */, Dictionary<int /* from state */, float>>[] transProbs,
-                /* key: observation */ Dictionary<int /* state */, float>[] emitProbs)
+                int numObs,
+                float[] startProbs,
+                float[][] emitProbs,
+                TransitionProbability transProbs)
         {
-            int numObs = emitProbs.Length;
+            if (numObs == 0)
+            {
+                return (new int[], 0.0f);
+            }
 
             //                               ↓ observation   ↓ state
             var probs      = new Dictionary<int, Dictionary<int, float>>();
@@ -20,41 +26,35 @@ namespace Itinero.MapMatching
 
             probs.Add(0, new Dictionary<int, float>());
             prevStates.Add(0, new Dictionary<int, int>());
-            foreach (var item in startProbs)
-            {
-                var state     = item.Key;
-                var startProb = item.Value;
-
-                probs[0][state] = startProb;
-            }
+            probs[0] = startProbs;
 
             // skip first observation because it has no predecessor
             for (int observation = 1; observation < numObs; observation++)
             {
+                Console.WriteLine("obs {0,4}", observation, state);
+
                 probs.Add(observation, new Dictionary<int, float>());
                 prevStates.Add(observation, new Dictionary<int, int>());
-                foreach (var item in emitProbs[observation])
-                {
-                    int state = item.Key;
-                    float emitProb = item.Value;
 
-                    Console.WriteLine("obs {0,4}   state {1,4}", observation, state);
+                float transProb = transProbs(observation, observation - 1);
+
+                for (int toState = 0; toState < emitProbs[observation].Length; i++)
+                {
+                    float emitProb = emitProbs[observation][toState];
+
+                    //Console.WriteLine("obs {0,4}   state {1,4}", observation, state);
 
                     int argmax = 0; // to determine: best predecessor…
                     float max = float.NegativeInfinity; // …and probability of the sequence if we choose that predecessor
 
-                    var stateToStateToProb = transProbs[observation];
-                    var stateToProb = stateToStateToProb[state];
-                    foreach (var item2 in stateToProb)
+                    for (int fromState = 0; fromState < emitProbs[observation - 1].Length; i++)
                     {
-                        int prevState = item2.Key;
-                        float transProb = item2.Value;
 
                         float prevStateProb = probs[observation - 1][prevState];
 
                         float prob = prevStateProb + transProb + emitProb;
 
-                        Console.WriteLine("  prev state {0,4} ({1})   transition prob {2}  emit prob {3}", prevState, prevStateProb, transProb, emitProb);
+                        //Console.WriteLine("  prev state {0,4} ({1})   transition prob {2}  emit prob {3}", prevState, prevStateProb, transProb, emitProb);
 
                         if (prob > max) {
                             max = prob;
