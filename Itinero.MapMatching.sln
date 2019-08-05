@@ -15,6 +15,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Itinero.MapMatching.Test", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Itinero.MapMatching.Test.Functional", "test\Itinero.MapMatching.Test.Functional\Itinero.MapMatching.Test.Functional.csproj", "{992FCCC6-19AA-450E-BD43-6E3E24E317DE}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "root", "root", "{38B37641-2132-4AD3-903A-48FF0570367C}"
+ProjectSection(SolutionItems) = preProject
+	LICENSE = LICENSE
+	README.md = README.md
+	Itinero.MapMatching.sln = Itinero.MapMatching.sln
+	.gitignore = .gitignore
+EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
