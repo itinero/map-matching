@@ -87,11 +87,12 @@ namespace Itinero.MapMatching.Test.Functional
                 Path.Combine("data", "bicycle", "test2.json"),
                 Path.Combine("data", "bicycle", "test3.json"),
                 Path.Combine("data", "bicycle", "test4.json"),
-                Path.Combine("data", "bicycle", "test5.json")
-//                Path.Combine("data", "bicycle", "simple1.json"),
-//                Path.Combine("data", "bicycle", "simple2.json"),
-//                Path.Combine("data", "bicycle", "case1-tour-taxis-fiction.json"),
-//                Path.Combine("data", "bicycle", "case2-tour-taxis-fiction.json"),
+                Path.Combine("data", "bicycle", "test5.json"),
+                Path.Combine("data", "car", "test1.json"),
+                Path.Combine("data", "car", "test2.json"),
+                Path.Combine("data", "car", "test3.json"),
+                //Path.Combine("data", "car", "test4.json"),
+                Path.Combine("data", "car", "test5.json")
             };
 
             // run all for them.

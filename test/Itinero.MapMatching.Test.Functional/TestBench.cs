@@ -7,27 +7,40 @@ using Itinero.Geo;
 using Itinero.IO.Osm;
 using Itinero.MapMatching;
 using Itinero.MapMatching.Test.Functional.Domain;
-using Itinero.Osm.Vehicles;
+using Itinero.Profiles;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Operation.Buffer;
 using NetTopologySuite.Operation.Valid;
 using Newtonsoft.Json;
 using OsmSharp.Streams;
+using Vehicle = Itinero.Osm.Vehicles.Vehicle;
 
 namespace Itinero.MapMatching.Test.Functional
 {
     internal static class TestBench
     {
+        private static Dictionary<string, DynamicVehicle> Vehicles = new Dictionary<string, DynamicVehicle>();
+        
+        private static DynamicVehicle LoadVehicle(string vehicleFile)
+        {
+            if (Vehicles.TryGetValue(vehicleFile, out var vehicle)) return vehicle;
+            
+            using (var vehicleFileStream = File.OpenRead(vehicleFile))
+            {
+                vehicle = DynamicVehicle.LoadFromStream(vehicleFileStream);
+            }
+
+            Vehicles[vehicleFile] = vehicle;
+            return vehicle;
+        }
+        
         public static (bool success, string message) Run(this TestData test)
         {
             try
             {
-                if (!"bicycle".Equals(test.Profile.Name))
-                {
-                    return (false, "Currently only the bicycle profile is supported in the test bench");
-                }
-                var vehicle = Vehicle.Bicycle;
+                // load vehicle.
+                var vehicle = LoadVehicle(test.Profile.File);
 
                 // load data using vehicle.
                 var routerDb = new RouterDb();
@@ -72,7 +85,7 @@ namespace Itinero.MapMatching.Test.Functional
                 }
 
                 var router = new Router(routerDb);
-                var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle"));
+                var matcher = new MapMatcher(router, router.Db.GetSupportedProfile(test.Profile.Name));
 
                 var mapMatchResult = matcher.TryMatch(track);
                 if (mapMatchResult.IsError)

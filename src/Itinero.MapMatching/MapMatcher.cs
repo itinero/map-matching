@@ -23,6 +23,9 @@ namespace Itinero.MapMatching
         {
             _router = router;
             _profile = profile;
+            
+            if (_profile.Metric != ProfileMetric.DistanceInMeters) { throw new ArgumentException(
+                $"Only profiles supported with distance as metric.", $"{nameof(profile)}"); }
         }
 
         public MapMatcherResult Match(Track track)
@@ -161,14 +164,13 @@ namespace Itinero.MapMatching
 
                 transitP[trackPointId + 1] = new Dictionary<int, Dictionary<int, float>>();
 
-                var profile = Vehicle.Bicycle.Shortest();
                 var sources = projection[trackPointId].ToArray();
                 var targets = projection[trackPointId + 1].ToArray();
                 var failedSources = new HashSet<int>();
                 var failedTargets = new HashSet<int>();
 
                 var weights = _router.TryCalculateWeight(
-                        profile, _router.GetDefaultWeightHandler(profile),
+                        _profile, _router.GetDefaultWeightHandler(_profile),
                         sources, targets,
                         failedSources, failedTargets);
 

@@ -1,11 +1,11 @@
 {
     "description": "A simple, almost perfect, track.",
     "profile": {
-        "name": "bicycle.shortest",
-        "file": "data/bicycle.lua"
+        "name": "car.shortest",
+        "file": "data/car.lua"
     },
-    "trackfile": "data/bicycle/test2-track.geojson",
-    "osmdatafile": "data/bicycle/test2-network.osm.pbf",
+    "trackfile": "data/car/test2-track.geojson",
+    "osmdatafile": "data/car/test2-network.osm.pbf",
     "expected": {
         "type": "LineString",
         "coordinates": [
