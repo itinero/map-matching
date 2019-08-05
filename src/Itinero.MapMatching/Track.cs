@@ -37,14 +37,14 @@ namespace Itinero.MapMatching
         
         }
 
-        public Track(IEnumerable<(Coordinate coord, DateTime? time, float? hdop)> points)
-        {
-            _points = (from point in points select new TrackPoint(point)).ToList();
-        }
-
         public Track(IEnumerable<TrackPoint> points)
         {
             _points = points.ToList();
+        }
+
+        public Track(List<(Coordinate, DateTime?, float?)> points)
+        {
+            _points = (from point in points select new TrackPoint(point)).ToList();
         }
 
         public ReadOnlyCollection<TrackPoint> Points => new ReadOnlyCollection<TrackPoint>(_points);

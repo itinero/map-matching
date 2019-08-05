@@ -226,8 +226,6 @@ namespace Itinero.MapMatching
                 }
             }
 
-            Console.WriteLine();
-
             return transitP;
         }
 

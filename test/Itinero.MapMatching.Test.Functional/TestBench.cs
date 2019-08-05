@@ -12,6 +12,7 @@ using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Operation.Buffer;
 using NetTopologySuite.Operation.Valid;
+using Newtonsoft.Json;
 using OsmSharp.Streams;
 
 namespace Itinero.MapMatching.Test.Functional
@@ -55,9 +56,19 @@ namespace Itinero.MapMatching.Test.Functional
 
                 // test route.
                 Track track;
-                using (var stream = File.OpenRead(test.TrackFile))
+                if (test.TrackFile.EndsWith(".tsv"))
                 {
-                    track = Itinero.MapMatching.Demo.TrackLoader.FromTsv(new StreamReader(stream));
+                    using (var stream = File.OpenRead(test.TrackFile))
+                    {
+                        track = FromTsv(new StreamReader(stream));
+                    }
+                }
+                else
+                {
+                    using (var stream = File.OpenRead(test.TrackFile))
+                    {
+                        track = FromGeoJson(new StreamReader(stream));
+                    }
                 }
 
                 var router = new Router(routerDb);
@@ -70,9 +81,9 @@ namespace Itinero.MapMatching.Test.Functional
                 }
 
                 // check route.
-                MapMatcherResult result = mapMatchResult.Value;
+                var result = mapMatchResult.Value;
                 var routeLineString = result.Route.ToLineString();
-                var expectedBuffered = BufferOp.Buffer(test.Expected, 0.000005);
+                var expectedBuffered = BufferOp.Buffer(test.Expected, 0.00005);
                 if (!expectedBuffered.Covers(routeLineString))
                 {
                     File.WriteAllText(test.TrackFile + ".failed.geojson",
@@ -119,9 +130,59 @@ namespace Itinero.MapMatching.Test.Functional
             var lineString = new LineString(coordinates.ToArray());
             features.Add(new Feature(lineString, new AttributesTable{{ "type", "track"}}));
 
-            //features.Add(new Feature(buffer, new AttributesTable{{"type", "buffer"}}));
+            features.Add(new Feature(buffer, new AttributesTable{{"type", "buffer"}}));
 
             return features;
+        }
+        
+        private static Track FromTsv(TextReader reader)
+        {
+            var track = new List<(Itinero.LocalGeo.Coordinate, DateTime?, float?)>();
+
+            string line;
+            while((line = reader.ReadLine()) != null)
+            {
+                if (line.Length == 0 || line[0] == '#')
+                {
+                    continue;
+                }
+                var fields = line.Split("\t");
+
+                var time = fields[0].Equals("None") ? (DateTime?) null : DateTime.Parse(fields[0]);
+
+                var lat = float.Parse(fields[1]);
+                var lon = float.Parse(fields[2]);
+
+                float? maybeHdop = null;
+                if (!fields[3].Equals("None") && float.TryParse(fields[3], out var hdop))
+                    maybeHdop = hdop;
+
+                track.Add((new Itinero.LocalGeo.Coordinate(lat, lon), time, maybeHdop));
+            }
+
+            return new Track(track);
+        }
+        
+        private static Track FromGeoJson(TextReader reader)
+        {
+            var jsonSerializer = NetTopologySuite.IO.GeoJsonSerializer.Create();
+            var featureCollection = jsonSerializer.Deserialize<FeatureCollection>(new JsonTextReader(reader));
+            foreach (var feature in featureCollection.Features)
+            {
+                if (feature.Geometry is LineString lineString)
+                {
+                    var track = new List<(Itinero.LocalGeo.Coordinate, DateTime?, float?)>();
+
+                    foreach (var c in lineString.Coordinates)
+                    {
+                        track.Add((new Itinero.LocalGeo.Coordinate((float)c.Y, (float)c.X), null, null));
+                    }
+
+                    return new Track(track);
+                }
+            }
+            
+            throw new Exception("Track not found.");
         }
     }
 }

@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Itinero.MapMatching.Demo\Itinero.MapMatching.Demo.csproj" />
+    <ProjectReference Include="..\..\src\Itinero.MapMatching\Itinero.MapMatching.csproj" />
   </ItemGroup>
 
 </Project>

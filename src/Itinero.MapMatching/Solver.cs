@@ -5,14 +5,14 @@ using System.Text;
 
 namespace Itinero.MapMatching
 {
-    class Solver
+    internal static class Solver
     {
         public static (int[], float) ForwardViterbi(
                 Dictionary<int /* state */, float> startProbs,
                 /* key: observation */ Dictionary<int /* to state */, Dictionary<int /* from state */, float>>[] transProbs,
                 /* key: observation */ Dictionary<int /* state */, float>[] emitProbs)
         {
-            int numObs = emitProbs.Length;
+            var numObs = emitProbs.Length;
 
             //                               ↓ observation   ↓ state
             var probs      = new Dictionary<int, Dictionary<int, float>>();
@@ -20,46 +20,36 @@ namespace Itinero.MapMatching
 
             probs.Add(0, new Dictionary<int, float>());
             prevStates.Add(0, new Dictionary<int, int>());
-            foreach (var item in startProbs)
+            foreach (var (state, startProb) in startProbs)
             {
-                var state     = item.Key;
-                var startProb = item.Value;
-
                 probs[0][state] = startProb;
             }
 
             // skip first observation because it has no predecessor
-            for (int observation = 1; observation < numObs; observation++)
+            for (var observation = 1; observation < numObs; observation++)
             {
                 probs.Add(observation, new Dictionary<int, float>());
                 prevStates.Add(observation, new Dictionary<int, int>());
-                foreach (var item in emitProbs[observation])
+                foreach (var (state, emitProb) in emitProbs[observation])
                 {
-                    int state = item.Key;
-                    float emitProb = item.Value;
+                    //Console.WriteLine("obs {0,4}   state {1,4}", observation, state);
 
-                    Console.WriteLine("obs {0,4}   state {1,4}", observation, state);
-
-                    int argmax = 0; // to determine: best predecessor…
-                    float max = float.NegativeInfinity; // …and probability of the sequence if we choose that predecessor
+                    var argmax = 0; // to determine: best predecessor…
+                    var max = float.NegativeInfinity; // …and probability of the sequence if we choose that predecessor
 
                     var stateToStateToProb = transProbs[observation];
                     var stateToProb = stateToStateToProb[state];
-                    foreach (var item2 in stateToProb)
+                    foreach (var (prevState, transProb) in stateToProb)
                     {
-                        int prevState = item2.Key;
-                        float transProb = item2.Value;
+                        var prevStateProb = probs[observation - 1][prevState];
+                        var prob = prevStateProb + transProb + emitProb;
 
-                        float prevStateProb = probs[observation - 1][prevState];
+                        //Console.WriteLine("  prev state {0,4} ({1})   transition prob {2}  emit prob {3}", prevState, prevStateProb, transProb, emitProb);
 
-                        float prob = prevStateProb + transProb + emitProb;
-
-                        Console.WriteLine("  prev state {0,4} ({1})   transition prob {2}  emit prob {3}", prevState, prevStateProb, transProb, emitProb);
-
-                        if (prob > max) {
-                            max = prob;
-                            argmax = prevState;
-                        }
+                        if (!(prob > max)) continue;
+                        
+                        max = prob;
+                        argmax = prevState;
                     }
 
                     probs[observation][state] = max;
@@ -68,25 +58,21 @@ namespace Itinero.MapMatching
             }
 
             // determine most probable path
-            int lastObs = numObs - 1;
-            int mostProbableEndpoint = 0;
-            float mostProbableProb = float.NegativeInfinity;
-            foreach (var item in probs[lastObs])
+            var lastObs = numObs - 1;
+            var mostProbableEndpoint = 0;
+            var mostProbableProb = float.NegativeInfinity;
+            foreach (var (state, prob) in probs[lastObs])
             {
-                int state = item.Key;
-                float prob = item.Value;
-
-                if (prob > mostProbableProb)
-                {
-                    mostProbableProb = prob;
-                    mostProbableEndpoint = state;
-                }
+                if (!(prob > mostProbableProb)) continue; 
+                
+                mostProbableProb = prob;
+                mostProbableEndpoint = state;
             }
 
             // backtrack: build most probable path
             var path = new int[numObs];
             path[lastObs] = mostProbableEndpoint;
-            for (int observation = lastObs; observation > 0; observation--)
+            for (var observation = lastObs; observation > 0; observation--)
             {
                 path[observation - 1] = prevStates[observation][path[observation]];
             }
