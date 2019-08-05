@@ -1,8 +1,9 @@
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
+using Itinero;
 using Itinero.LocalGeo;
 
-namespace Itinero.MapMatching.Demo
+namespace Sample.Bicycle
 {
     public static class GeoJsonExtensions
     {

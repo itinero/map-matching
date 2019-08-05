@@ -1,9 +1,10 @@
 using System;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 using Itinero.LocalGeo;
+using Itinero.MapMatching;
 
-namespace Itinero.MapMatching.Demo
+namespace Sample.Bicycle
 {
     public class TrackLoader
     {

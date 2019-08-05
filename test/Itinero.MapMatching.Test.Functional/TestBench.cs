@@ -72,7 +72,7 @@ namespace Itinero.MapMatching.Test.Functional
                 }
 
                 var router = new Router(routerDb);
-                var matcher = new MapMatcher(router);
+                var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle"));
 
                 var mapMatchResult = matcher.TryMatch(track);
                 if (mapMatchResult.IsError)

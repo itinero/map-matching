@@ -6,22 +6,23 @@ using Itinero.Algorithms.Search;
 using Itinero.IO.Osm;
 using Itinero.IO.Json;
 using Itinero.LocalGeo;
-using Itinero.Osm.Vehicles;
 using System.Linq;
 using Itinero.Algorithms.Weights;
 using Itinero.Logging;
+using Itinero.Profiles;
+using Vehicle = Itinero.Osm.Vehicles.Vehicle;
 
 namespace Itinero.MapMatching
 {
     public class MapMatcher
     {
-        private readonly RouterDb _db;
         private readonly Router _router;
+        private readonly Profile _profile;
 
-        public MapMatcher(Router router)
+        public MapMatcher(Router router, Profile profile)
         {
-            _db = router.Db;
             _router = router;
+            _profile = profile;
         }
 
         public MapMatcherResult Match(Track track)
@@ -61,7 +62,7 @@ namespace Itinero.MapMatching
                     var routerPoint = projection[i][j];
                     rpntLocProbs[i][j] = new MapMatcherPoint(
                             routerPoint,
-                            routerPoint.LocationOnNetwork(_db),
+                            routerPoint.LocationOnNetwork(_router.Db),
                             emitP[i][j]);
                 }
             }
@@ -78,7 +79,7 @@ namespace Itinero.MapMatching
             var routes = new Result<Route>[points.Count - 1];
             for (var i = 0; i < points.Count - 1; i++)
             {
-                routes[i] = _router.TryCalculate(_db.GetSupportedProfile("bicycle"), points[i], points[i + 1]);
+                routes[i] = _router.TryCalculate(_profile, points[i], points[i + 1]);
             }
 
             return routes.Concatenate();
@@ -89,14 +90,14 @@ namespace Itinero.MapMatching
             /* track point, projected point */
             var projection = new List<RouterPoint>[track.Points.Count];
 
-            var isAcceptable = _router.GetIsAcceptable(_db.GetSupportedProfile("bicycle"));
+            var isAcceptable = _router.GetIsAcceptable(_profile);
 
             for (var id = 0; id < track.Points.Count; id++)
             {
                 var resolve = new ResolveMultipleAlgorithm(
-                        _db.Network.GeometricGraph,
+                    _router.Db.Network.GeometricGraph,
                         track.Points[id].Coord.Latitude, track.Points[id].Coord.Longitude,
-                        Offset(track.Points[id].Coord, _db.Network), 100f /* meters */,
+                        Offset(track.Points[id].Coord, _router.Db.Network), 100f /* meters */,
                         isAcceptable, /* allow non-orthogonal projections */ true);
                 resolve.Run();
 
@@ -126,7 +127,7 @@ namespace Itinero.MapMatching
                 foreach (var resolvedPoint in projection[trackPointId])
                 {
                     var origLoc     = resolvedPoint.Location();
-                    var resolvedLoc = resolvedPoint.LocationOnNetwork(_db);
+                    var resolvedLoc = resolvedPoint.LocationOnNetwork(_router.Db);
 
                     // probability = log(1 / sqrt(2 * pi) / sigma * exp(-0.5 * distance(origLoc, resolvedLoc)))
                     var logProbability = factor - 0.5f * Coordinate.DistanceEstimateInMeter(origLoc, resolvedLoc);

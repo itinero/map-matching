@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using Itinero;
 using Itinero.LocalGeo;
 using Itinero.MapMatching;
-using Itinero.IO.Osm;
-using Itinero.Osm.Vehicles;
 
-namespace Itinero.MapMatching.Demo
+namespace Sample.Bicycle
 {
     class Program
     {
@@ -31,7 +28,7 @@ namespace Itinero.MapMatching.Demo
             }
 
             // do map matching.
-            var matcher = new MapMatcher(router);
+            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle"));
             var mapMatcherResult = matcher.Match(track);
 
             if (args.Length >= 2 && args[2].Length > 0 && !args[2].Equals("-"))
