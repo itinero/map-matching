@@ -23,7 +23,7 @@ namespace Itinero.MapMatching
 
         public MapMatcher(Router router, Profile profile)
         {
-            if (_profile.Metric != ProfileMetric.DistanceInMeters) { throw new ArgumentException(
+            if (profile.Metric != ProfileMetric.DistanceInMeters) { throw new ArgumentException(
                 $"Only profiles supported with distance as metric.", $"{nameof(profile)}"); }
             
             _router = router;
