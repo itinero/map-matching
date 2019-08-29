@@ -19,17 +19,15 @@
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
-    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute> 
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <PackageVersion>0.0.1-pre001</PackageVersion>
+    <Title>Itinero Map Matching</Title>
+    <PackageLicenseUrl>https://github.com/itinero/map-matching/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Itinero" Version="1.6.0-pre007" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\..\SharedAssemblyVersion.cs">
-      <Link>SharedAssemblyVersion.cs</Link>
-    </Compile>
   </ItemGroup>
 
 </Project>
