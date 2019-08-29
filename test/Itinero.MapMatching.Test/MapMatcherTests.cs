@@ -27,7 +27,7 @@ namespace Itinero.MapMatching.Test
                 new TrackPoint(routerDb.Network.GetVertex(v2))
             });
             
-            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle"));
+            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle.shortest"));
             var result = matcher.Match(track);
 
             Assert.NotNull(result);
@@ -58,7 +58,7 @@ namespace Itinero.MapMatching.Test
                 new TrackPoint(routerDb.Network.GetVertex(v1)), 
             });
             
-            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle"));
+            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle.shortest"));
             var result = matcher.Match(track);
 
             Assert.NotNull(result);
@@ -89,7 +89,7 @@ namespace Itinero.MapMatching.Test
                 new TrackPoint(new Coordinate(51.26690621069770f, 4.800923466682434f)) 
             });
             
-            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle"));
+            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle.shortest"));
             var result = matcher.Match(track);
 
             Assert.NotNull(result);
@@ -120,7 +120,7 @@ namespace Itinero.MapMatching.Test
                 new TrackPoint(new Coordinate(51.26692970605557f, 4.801129996776581f)) 
             });
             
-            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle"));
+            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle.shortest"));
             var result = matcher.Match(track);
 
             Assert.NotNull(result);
@@ -151,7 +151,7 @@ namespace Itinero.MapMatching.Test
                 new TrackPoint(new Coordinate(51.26693641901275f, 4.800944924354553f)) 
             });
             
-            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle"));
+            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle.shortest"));
             var result = matcher.Match(track);
 
             Assert.NotNull(result);
@@ -182,7 +182,7 @@ namespace Itinero.MapMatching.Test
                 new TrackPoint(new Coordinate(51.266372527190775f,  4.800816178321838f)) 
             });
             
-            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle"));
+            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle.shortest"));
             var result = matcher.Match(track);
 
             Assert.NotNull(result);
