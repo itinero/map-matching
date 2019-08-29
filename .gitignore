@@ -51,6 +51,7 @@ TestResult*.xml
 .idea
 .idea/*
 test/Itinero.*.Test.*/**/*.geojson
+!test/Itinero.MapMatching.Test.Functional/data/**/*-track.geojson
 perf.data
 perf.data.old
 
