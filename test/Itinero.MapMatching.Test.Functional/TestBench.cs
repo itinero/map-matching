@@ -132,13 +132,13 @@ namespace Itinero.MapMatching.Test.Functional
             {
                 features.Add(new Feature(new LineString(new []
                 {
-                    new Coordinate(point.RPoint.Location().Longitude, 
-                        point.RPoint.Location().Latitude),
-                    new Coordinate(point.RPoint.LocationOnNetwork(router.Db).Longitude,
-                        point.RPoint.LocationOnNetwork(router.Db).Latitude), 
+                    new Coordinate(point.RouterPoint.Location().Longitude, 
+                        point.RouterPoint.Location().Latitude),
+                    new Coordinate(point.RouterPoint.LocationOnNetwork(router.Db).Longitude,
+                        point.RouterPoint.LocationOnNetwork(router.Db).Latitude), 
                 }), new AttributesTable{{"type", "snapline"}}));
-                coordinates.Add(new Coordinate(point.RPoint.Location().Longitude, 
-                    point.RPoint.Location().Latitude));
+                coordinates.Add(new Coordinate(point.RouterPoint.Location().Longitude, 
+                    point.RouterPoint.Location().Latitude));
             }
             var lineString = new LineString(coordinates.ToArray());
             features.Add(new Feature(lineString, new AttributesTable{{ "type", "track"}}));

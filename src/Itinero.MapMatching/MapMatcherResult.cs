@@ -4,37 +4,23 @@ using System.Collections.Generic;
 
 namespace Itinero.MapMatching
 {
-    public struct MapMatcherPoint
-    {
-        public RouterPoint RPoint { get; }
-        public Coordinate Coord { get; }
-        public float Probability { get; }
-
-        public MapMatcherPoint(RouterPoint routerPoint, Coordinate coord, float probability)
-        {
-            RPoint = routerPoint;
-            Coord = coord;
-            Probability = probability;
-        }
-    }
-
+    /// <summary>
+    /// Represents the result of a matching.
+    /// </summary>
     public class MapMatcherResult
     {
-        public Track Source { get; }
-        public Route Route { get; }
+        // TODO: do we need the route here?
+        // TODO: do we need the source track again?
+        // TODO: do we need all the projection points?
 
-        /// <summary>Outermost array: per source point. Innermost array: per possible
-        /// projection.</summary>
-        public MapMatcherPoint[][] ProjectionPoints { get; }
-        public int[] ChosenIndices { get; }
-        public MapMatcherPoint[] ChosenProjectionPoints { get; }
-
-
-        public MapMatcherResult(
-                Track source,
-                MapMatcherPoint[][] projectionPoints,
-                int[] chosenIndices,
-                Route route)
+        /// <summary>
+        /// Creates a new result.
+        /// </summary>
+        /// <param name="source">The source track.</param>
+        /// <param name="projectionPoints">The possible projection points.</param>
+        /// <param name="chosenIndices">The chosen indices.</param>
+        /// <param name="route">The route.</param>
+        public MapMatcherResult(Track source, IReadOnlyList<MapMatcherPoint[]> projectionPoints, int[] chosenIndices, Route route)
         {
             Source = source;
 
@@ -44,50 +30,80 @@ namespace Itinero.MapMatching
             Array.Copy(chosenIndices, 0, ChosenIndices, 0, chosenIndices.Length);
 
             ChosenProjectionPoints = new MapMatcherPoint[ProjectionPoints.Length];
-            for (int i = 0; i < ProjectionPoints.Length; i++)
+            for (var i = 0; i < ProjectionPoints.Length; i++)
             {
                 ChosenProjectionPoints[i] = ProjectionPoints[i][ChosenIndices[i]];
             }
         }
+        
+        /// <summary>
+        /// The source track.
+        /// </summary>
+        public Track Source { get; }
+        
+        /// <summary>
+        /// The route.
+        /// </summary>
+        public Route Route { get; }
 
+        /// <summary>
+        /// Outermost array: per source point.
+        /// Innermost array: per possible projection.
+        /// </summary>
+        public MapMatcherPoint[][] ProjectionPoints { get; }
+        
+        /// <summary>
+        /// The indices of the chosen points.
+        /// </summary>
+        public int[] ChosenIndices { get; }
+        
+        /// <summary>
+        /// The chosen projection points.
+        /// </summary>
+        public MapMatcherPoint[] ChosenProjectionPoints { get; }
 
-        /// <summary>Gives lines that connect the original points with their chosen projection on
-        /// the road network</summary>
-        public Line[] ChosenProjectionLines()
+        /// <summary>
+        /// Gives lines that connect the original points with their chosen projection on the road network.
+        /// </summary>
+        public IEnumerable<Line> ChosenProjectionLines()
         {
             var lines = new Line[Source.Points.Count];
-            for (int i = 0; i < Source.Points.Count; i++)
+            for (var i = 0; i < Source.Points.Count; i++)
             {
-                lines[i] = new Line(Source.Points[i].Coord, ChosenProjectionPoints[i].Coord);
+                lines[i] = new Line(Source.Points[i].Coord, ChosenProjectionPoints[i].Coordinate);
             }
             return lines;
         }
 
-        /// <summary>Gives lines that connect the original points with all possible projections on
-        /// the road network, and also the probability assigned to each</summary>
+        /// <summary>
+        /// Gives lines that connect the original points with all possible projections on the road network, and also the probability assigned to each.
+        /// </summary>
         public List<(Line line, float probability, bool chosen)> AllProjectionLines()
         {
             var lines = new List<(Line, float, bool)>();
-            for (int i = 0; i < Source.Points.Count; i++)
+            for (var i = 0; i < Source.Points.Count; i++)
             {
                 var point = Source.Points[i];
 
-                for (int j = 0; j < ProjectionPoints[i].Length; j++)
+                for (var j = 0; j < ProjectionPoints[i].Length; j++)
                 {
                     var projection = ProjectionPoints[i][j];
-                    bool chosen = j == ChosenIndices[i];
-                    lines.Add((new Line(point.Coord, projection.Coord), projection.Probability, chosen));
+                    var chosen = j == ChosenIndices[i];
+                    lines.Add((new Line(point.Coord, projection.Coordinate), projection.Probability, chosen));
                 }
             }
             return lines;
         }
+        
+        // TODO: move this somewhere else?
 
-
-        /// <summary>Deep clone for 2D arrays</summary>
-        private T[][] TwoDClone<T>(T[][] array)
+        /// <summary>
+        /// Deep clone for 2D arrays
+        /// </summary>
+        private static T[][] TwoDClone<T>(IReadOnlyList<T[]> array)
         {
-            var clone = new T[array.Length][];
-            for (int i = 0; i < array.Length; i++)
+            var clone = new T[array.Count][];
+            for (var i = 0; i < array.Count; i++)
             {
                 clone[i] = new T[array[i].Length];
                 Array.Copy(array[i], 0, clone[i], 0, array[i].Length);

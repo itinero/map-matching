@@ -21,11 +21,11 @@ namespace Itinero.MapMatching
 
         public MapMatcher(Router router, Profile profile)
         {
-            _router = router;
-            _profile = profile;
-            
             if (_profile.Metric != ProfileMetric.DistanceInMeters) { throw new ArgumentException(
                 $"Only profiles supported with distance as metric.", $"{nameof(profile)}"); }
+            
+            _router = router;
+            _profile = profile;
         }
 
         public MapMatcherResult Match(Track track)

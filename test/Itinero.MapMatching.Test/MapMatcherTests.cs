@@ -33,10 +33,10 @@ namespace Itinero.MapMatching.Test
             Assert.NotNull(result);
             Assert.NotNull(result.ChosenProjectionPoints);
             Assert.Equal(2, result.ChosenProjectionPoints.Length);
-            Assert.Equal(50.86697652157864, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.350167512893677, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
-            Assert.Equal(50.86664473085768, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.351245760917664, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(50.86697652157864, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.350167512893677, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(50.86664473085768, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.351245760917664, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
         }
         
         [Fact]
@@ -64,10 +64,10 @@ namespace Itinero.MapMatching.Test
             Assert.NotNull(result);
             Assert.NotNull(result.ChosenProjectionPoints);
             Assert.Equal(2, result.ChosenProjectionPoints.Length);
-            Assert.Equal(50.86664473085768, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.351245760917664, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
-            Assert.Equal(50.86697652157864, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.350167512893677, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(50.86664473085768, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.351245760917664, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(50.86697652157864, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.350167512893677, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
         }
         
         [Fact]
@@ -95,10 +95,10 @@ namespace Itinero.MapMatching.Test
             Assert.NotNull(result);
             Assert.NotNull(result.ChosenProjectionPoints);
             Assert.Equal(2, result.ChosenProjectionPoints.Length);
-            Assert.Equal(51.26779566943717, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.801357984542847, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
-            Assert.Equal(51.26685586346179, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.801095128059387, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(51.26779566943717, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.801357984542847, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(51.26685586346179, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.801095128059387, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
         }
         
         [Fact]
@@ -126,10 +126,10 @@ namespace Itinero.MapMatching.Test
             Assert.NotNull(result);
             Assert.NotNull(result.ChosenProjectionPoints);
             Assert.Equal(2, result.ChosenProjectionPoints.Length);
-            Assert.Equal(51.26758589298387, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.801304340362548, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
-            Assert.Equal(51.26692970605557, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.801129996776581, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(51.26758589298387, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.801304340362548, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(51.26692970605557, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.801129996776581, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
         }
         
         [Fact]
@@ -157,10 +157,10 @@ namespace Itinero.MapMatching.Test
             Assert.NotNull(result);
             Assert.NotNull(result.ChosenProjectionPoints);
             Assert.Equal(2, result.ChosenProjectionPoints.Length);
-            Assert.Equal(51.26758589298387, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.801304340362548, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
-            Assert.Equal(51.26692970605557, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.801129996776581, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(51.26758589298387, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.801304340362548, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(51.26692970605557, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.801129996776581, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
         }
         
         [Fact]
@@ -188,10 +188,10 @@ namespace Itinero.MapMatching.Test
             Assert.NotNull(result);
             Assert.NotNull(result.ChosenProjectionPoints);
             Assert.Equal(2, result.ChosenProjectionPoints.Length);
-            Assert.Equal(51.26779566943717f, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.801357984542847f, result.ChosenProjectionPoints[0].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
-            Assert.Equal(51.26654370936813f, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Latitude, 4);
-            Assert.Equal(4.801028072834015f, result.ChosenProjectionPoints[1].RPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(51.26779566943717f, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.801357984542847f, result.ChosenProjectionPoints[0].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
+            Assert.Equal(51.26654370936813f, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Latitude, 4);
+            Assert.Equal(4.801028072834015f, result.ChosenProjectionPoints[1].RouterPoint.LocationOnNetwork(routerDb).Longitude, 4);
         }
     }
 }
