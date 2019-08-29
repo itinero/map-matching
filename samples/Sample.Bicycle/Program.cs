@@ -28,9 +28,7 @@ namespace Sample.Bicycle
             }
 
             // do map matching.
-            var matcher = new MapMatcher(router, router.Db.GetSupportedProfile("bicycle"));
-            var mapMatcherResult = matcher.Match(track);
-
+            var mapMatcherResult = router.Match(router.Db.GetSupportedProfile("bicycle"), track).Value;
             if (args.Length >= 2 && args[2].Length > 0 && !args[2].Equals("-"))
             {
                 File.WriteAllText(args[2], mapMatcherResult.Route.ToGeoJson());

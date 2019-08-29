@@ -14,10 +14,10 @@ namespace Itinero.MapMatching
         /// <param name="profile">The profile to use.</param>
         /// <param name="track">The track to match.</param>
         /// <returns></returns>
-        public static MapMatcherResult Match(this Router router, Profile profile, Track track)
+        public static Result<MapMatcherResult> Match(this Router router, Profile profile, Track track)
         {
             var matcher = new MapMatcher(router, profile);
-            return matcher.Match(track);
+            return matcher.TryMatch(track);
         }
     }
 }

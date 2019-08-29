@@ -7,14 +7,16 @@ using Itinero.IO.Osm;
 using Itinero.IO.Json;
 using Itinero.LocalGeo;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Itinero.Algorithms.Weights;
 using Itinero.Logging;
 using Itinero.Profiles;
 using Vehicle = Itinero.Osm.Vehicles.Vehicle;
 
+[assembly: InternalsVisibleTo("Itinero.MapMatching.Test")]
 namespace Itinero.MapMatching
 {
-    public class MapMatcher
+    internal class MapMatcher
     {
         private readonly Router _router;
         private readonly Profile _profile;

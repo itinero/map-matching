@@ -85,9 +85,7 @@ namespace Itinero.MapMatching.Test.Functional
                 }
 
                 var router = new Router(routerDb);
-                var matcher = new MapMatcher(router, router.Db.GetSupportedProfile(test.Profile.Name));
-
-                var mapMatchResult = matcher.TryMatch(track);
+                var mapMatchResult = router.Match(router.Db.GetSupportedProfile(test.Profile.Name), track);
                 if (mapMatchResult.IsError)
                 {
                     return (false, mapMatchResult.ErrorMessage);
