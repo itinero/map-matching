@@ -28,14 +28,15 @@ namespace Sample.Bicycle
             }
 
             // do map matching.
-            var mapMatcherResult = router.Match(router.Db.GetSupportedProfile("bicycle"), track).Value;
+            var mapMatcherResult = router.Match(router.Db.GetSupportedProfile("bicycle.shortest"), track).Value;
+            var route = router.ToRoute(mapMatcherResult);
             if (args.Length >= 2 && args[2].Length > 0 && !args[2].Equals("-"))
             {
-                File.WriteAllText(args[2], mapMatcherResult.Route.ToGeoJson());
+                File.WriteAllText(args[2], route.ToGeoJson());
             }
             else
             {
-                Console.WriteLine(mapMatcherResult.Route.ToGeoJson());
+                Console.WriteLine(route.ToGeoJson());
             }
 
             if (args.Length >= 3)

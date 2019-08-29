@@ -70,6 +70,37 @@ namespace Itinero.MapMatching
         /// Gets the number of segments.
         /// </summary>
         public int SegmentCount => _segments?.Count ?? 0;
+
+        /// <summary>
+        /// Gets the segment at the given index.
+        /// </summary>
+        /// <param name="index">The index.</param>
+        /// <returns>The segment.</returns>
+        public TrackSegment Segment(int index)
+        {
+            return _segments[index].segment;
+        }
+
+        /// <summary>
+        /// Gets the segment for the given track point. For track points where one segment ends and another begins the beginning segment is returned. The last segment is returned for the last track point.
+        /// </summary>
+        /// <param name="trackIndex">The track index.</param>
+        /// <returns>The segment for the given track point and the track index where it starts.</returns>
+        public (TrackSegment segment, int start) SegmentFor(int trackIndex)
+        {
+            for (var s = 0; s < this.SegmentCount; s++)
+            {
+                var segment = _segments[s];
+                var end = segment.index + segment.segment.Size;
+
+                if (end == this.Count && trackIndex == this.Count) return segment;
+                if (end <= trackIndex) continue;
+
+                return segment;
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(trackIndex), "Segment not found at the given track point.");
+        }
         
         /// <summary>
         /// Gets the enumerator.

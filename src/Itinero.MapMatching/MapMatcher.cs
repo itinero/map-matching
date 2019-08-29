@@ -8,6 +8,7 @@ using Itinero.IO.Json;
 using Itinero.LocalGeo;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Itinero.Algorithms;
 using Itinero.Algorithms.Weights;
 using Itinero.Logging;
 using Itinero.Profiles;
@@ -20,6 +21,7 @@ namespace Itinero.MapMatching
     {
         private readonly Router _router;
         private readonly Profile _profile;
+        private Result<EdgePath<float>>[] rawPaths;
 
         public MapMatcher(Router router, Profile profile)
         {
@@ -74,20 +76,20 @@ namespace Itinero.MapMatching
 
             // calculating a route should succeed, because a route has been calculated between
             // these points in the transition probability calculation phase.
-            var route = RouteThrough(routerPoints).Value;
+            rawPaths = RouteThrough(routerPoints);
 
-            return new Result<MapMatcherResult>(new MapMatcherResult(track, rpntLocProbs, path, route));
+            return new Result<MapMatcherResult>(new MapMatcherResult(track, _profile, rpntLocProbs, path, rawPaths));
         }
 
-        private Result<Route> RouteThrough(IReadOnlyList<RouterPoint> points)
+        private Result<EdgePath<float>>[] RouteThrough(IReadOnlyList<RouterPoint> points)
         {
-            var routes = new Result<Route>[points.Count - 1];
+            var routes = new Result<EdgePath<float>>[points.Count - 1];
             for (var i = 0; i < points.Count - 1; i++)
             {
-                routes[i] = _router.TryCalculate(_profile, points[i], points[i + 1]);
+                routes[i] = _router.TryCalculateRaw(_profile, _router.GetDefaultWeightHandler(_profile), points[i], points[i + 1]);
             }
 
-            return routes.Concatenate();
+            return routes;
         }
 
         private List<RouterPoint>[] ProjectionOnRoads(Track track)

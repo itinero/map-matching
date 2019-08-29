@@ -1,6 +1,8 @@
 using Itinero.LocalGeo;
 using System;
 using System.Collections.Generic;
+using Itinero.Algorithms;
+using Itinero.Profiles;
 
 namespace Itinero.MapMatching
 {
@@ -17,14 +19,15 @@ namespace Itinero.MapMatching
         /// Creates a new result.
         /// </summary>
         /// <param name="source">The source track.</param>
+        /// <param name="profile">The profile.</param>
         /// <param name="projectionPoints">The possible projection points.</param>
         /// <param name="chosenIndices">The chosen indices.</param>
-        /// <param name="route">The route.</param>
-        public MapMatcherResult(Track source, IReadOnlyList<MapMatcherPoint[]> projectionPoints, int[] chosenIndices, Route route)
+        /// <param name="rawPaths">The raw paths between the projection points.</param>
+        internal MapMatcherResult(Track source, Profile profile, IReadOnlyList<MapMatcherPoint[]> projectionPoints, int[] chosenIndices, IReadOnlyList<Result<EdgePath<float>>> rawPaths)
         {
             Source = source;
-
-            Route = route;
+            Profile = profile;
+            RawPaths = rawPaths;
             ProjectionPoints = TwoDClone(projectionPoints);
             ChosenIndices = new int[chosenIndices.Length];
             Array.Copy(chosenIndices, 0, ChosenIndices, 0, chosenIndices.Length);
@@ -42,20 +45,25 @@ namespace Itinero.MapMatching
         public Track Source { get; }
         
         /// <summary>
-        /// The route.
+        /// Gets the profile used for matching.
         /// </summary>
-        public Route Route { get; }
+        public Profile Profile { get; }
+        
+        /// <summary>
+        /// Gets the raw paths.
+        /// </summary>
+        public IReadOnlyList<Result<EdgePath<float>>> RawPaths { get; }
 
         /// <summary>
         /// Outermost array: per source point.
         /// Innermost array: per possible projection.
         /// </summary>
-        public MapMatcherPoint[][] ProjectionPoints { get; }
+        internal MapMatcherPoint[][] ProjectionPoints { get; }
         
         /// <summary>
         /// The indices of the chosen points.
         /// </summary>
-        public int[] ChosenIndices { get; }
+        internal int[] ChosenIndices { get; }
         
         /// <summary>
         /// The chosen projection points.
