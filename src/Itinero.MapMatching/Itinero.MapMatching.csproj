@@ -26,5 +26,10 @@
     <PackageReference Include="Itinero" Version="1.6.0-pre007" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\SharedAssemblyVersion.cs">
+      <Link>SharedAssemblyVersion.cs</Link>
+    </Compile>
+  </ItemGroup>
 
 </Project>
