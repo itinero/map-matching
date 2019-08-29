@@ -1,12 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!--<TargetFramework>netstandard2.0</TargetFramework>-->
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>Itinero.MapMatching</AssemblyName>
+    <PackageId>Itinero.MapMatching</PackageId>
+    <Description>Map matching for Itinero.</Description>
+    <Summary>A module for Itinero to do map matching.</Summary>
+    <Authors>Itinero B.V.B.A.</Authors>
+    <PackageId>Itinero.MapMatching</PackageId>
+    <PackageTags>map-matching;routing;gpx;gps-data</PackageTags>
+    <PackageIconUrl>https://www.itinero.tech/logos/itinero_logo_notext.svg.128.png</PackageIconUrl>
+    <PackageProjectUrl>https://www.itinero.tech/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/itinero/map-matching/</RepositoryUrl>
+    <PackageLicense>https://github.com/itinero/map-matching/blob/master/LICENSE</PackageLicense>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Itinero.IO.Osm" Version="1.6.0-pre007" />
+    <PackageReference Include="Itinero" Version="1.6.0-pre007" />
   </ItemGroup>
 
 

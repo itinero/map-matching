@@ -20,8 +20,10 @@ namespace Itinero.MapMatching
 
             probs.Add(0, new Dictionary<int, float>());
             prevStates.Add(0, new Dictionary<int, int>());
-            foreach (var (state, startProb) in startProbs)
+            foreach (var keyValue in startProbs)
             {
+                var state = keyValue.Key;
+                var startProb = keyValue.Value;
                 probs[0][state] = startProb;
             }
 
@@ -30,17 +32,19 @@ namespace Itinero.MapMatching
             {
                 probs.Add(observation, new Dictionary<int, float>());
                 prevStates.Add(observation, new Dictionary<int, int>());
-                foreach (var (state, emitProb) in emitProbs[observation])
+                foreach (var emitProbKeyValue in emitProbs[observation])
                 {
-                    //Console.WriteLine("obs {0,4}   state {1,4}", observation, state);
-
+                    var state = emitProbKeyValue.Key;
+                    var emitProb = emitProbKeyValue.Value;
                     var argmax = 0; // to determine: best predecessor…
                     var max = float.NegativeInfinity; // …and probability of the sequence if we choose that predecessor
 
                     var stateToStateToProb = transProbs[observation];
                     var stateToProb = stateToStateToProb[state];
-                    foreach (var (prevState, transProb) in stateToProb)
+                    foreach (var stateToProbKeyValue in stateToProb)
                     {
+                        var prevState = stateToProbKeyValue.Key;
+                        var transProb = stateToProbKeyValue.Value;
                         var prevStateProb = probs[observation - 1][prevState];
                         var prob = prevStateProb + transProb + emitProb;
 
@@ -61,8 +65,10 @@ namespace Itinero.MapMatching
             var lastObs = numObs - 1;
             var mostProbableEndpoint = 0;
             var mostProbableProb = float.NegativeInfinity;
-            foreach (var (state, prob) in probs[lastObs])
+            foreach (var keyValue in probs[lastObs])
             {
+                var state = keyValue.Key;
+                var prob = keyValue.Value;
                 if (!(prob > mostProbableProb)) continue; 
                 
                 mostProbableProb = prob;

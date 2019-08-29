@@ -3,7 +3,6 @@ using System.IO;
 using System.Collections.Generic;
 using Itinero;
 using Itinero.Algorithms.Search;
-using Itinero.IO.Osm;
 using Itinero.IO.Json;
 using Itinero.LocalGeo;
 using System.Linq;
