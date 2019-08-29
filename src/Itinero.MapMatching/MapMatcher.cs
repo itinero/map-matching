@@ -58,7 +58,7 @@ namespace Itinero.MapMatching
                 routerPoints[i] = projection[i][path[i]];
             }
 
-            var rpntLocProbs = new MapMatcherPoint[track.Points.Count][];
+            var rpntLocProbs = new MapMatcherPoint[track.Count][];
             for (var i = 0; i < rpntLocProbs.Length; i++)
             {
                 rpntLocProbs[i] = new MapMatcherPoint[projection[i].Count];
@@ -93,16 +93,16 @@ namespace Itinero.MapMatching
         private List<RouterPoint>[] ProjectionOnRoads(Track track)
         {
             /* track point, projected point */
-            var projection = new List<RouterPoint>[track.Points.Count];
+            var projection = new List<RouterPoint>[track.Count];
 
             var isAcceptable = _router.GetIsAcceptable(_profile);
 
-            for (var id = 0; id < track.Points.Count; id++)
+            for (var id = 0; id < track.Count; id++)
             {
                 var resolve = new ResolveMultipleAlgorithm(
                     _router.Db.Network.GeometricGraph,
-                        track.Points[id].Coord.Latitude, track.Points[id].Coord.Longitude,
-                        Offset(track.Points[id].Coord, _router.Db.Network), 100f /* meters */,
+                        track[id].Location.Latitude, track[id].Location.Longitude,
+                        Offset(track[id].Location, _router.Db.Network), 100f /* meters */,
                         isAcceptable, /* allow non-orthogonal projections */ true);
                 resolve.Run();
 
@@ -187,8 +187,8 @@ namespace Itinero.MapMatching
                 else if (failedTargets.Count > 0) Console.Error.WriteLine();
                 if (failedTargets.Count > 0) Console.Error.WriteLine($"  Warning: Has {failedTargets.Count}/{targets.Length} failed targets");
 
-                var fromTrackPoint = track.Points[trackPointId].Coord;
-                var toTrackPoint = track.Points[trackPointId + 1].Coord;
+                var fromTrackPoint = track[trackPointId].Location;
+                var toTrackPoint = track[trackPointId + 1].Location;
 
                 for (var toRouterPointId = 0; toRouterPointId < projection[trackPointId + 1].Count; toRouterPointId++)
                 {

@@ -58,11 +58,11 @@ namespace Sample.Bicycle
 
         public static Line[] ProjectionLines(Track track, RouterPoint[] projection, RouterDb routerDb)
         {
-            var projectionLines = new Line[track.Points.Count];
-            int i = 0;
-            foreach (var point in track.Points)
+            var projectionLines = new Line[track.Count];
+            var i = 0;
+            foreach (var point in track)
             {
-                projectionLines[i] = new Line(point.Coord, projection[i].LocationOnNetwork(routerDb));
+                projectionLines[i] = new Line(point.Location, projection[i].LocationOnNetwork(routerDb));
                 i++;
             }
             return projectionLines;

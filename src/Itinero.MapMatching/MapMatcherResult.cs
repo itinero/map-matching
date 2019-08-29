@@ -67,10 +67,10 @@ namespace Itinero.MapMatching
         /// </summary>
         public IEnumerable<Line> ChosenProjectionLines()
         {
-            var lines = new Line[Source.Points.Count];
-            for (var i = 0; i < Source.Points.Count; i++)
+            var lines = new Line[Source.Count];
+            for (var i = 0; i < Source.Count; i++)
             {
-                lines[i] = new Line(Source.Points[i].Coord, ChosenProjectionPoints[i].Coordinate);
+                lines[i] = new Line(Source[i].Location, ChosenProjectionPoints[i].Coordinate);
             }
             return lines;
         }
@@ -81,15 +81,15 @@ namespace Itinero.MapMatching
         public List<(Line line, float probability, bool chosen)> AllProjectionLines()
         {
             var lines = new List<(Line, float, bool)>();
-            for (var i = 0; i < Source.Points.Count; i++)
+            for (var i = 0; i < Source.Count; i++)
             {
-                var point = Source.Points[i];
+                var point = Source[i];
 
                 for (var j = 0; j < ProjectionPoints[i].Length; j++)
                 {
                     var projection = ProjectionPoints[i][j];
                     var chosen = j == ChosenIndices[i];
-                    lines.Add((new Line(point.Coord, projection.Coordinate), projection.Probability, chosen));
+                    lines.Add((new Line(point.Location, projection.Coordinate), projection.Probability, chosen));
                 }
             }
             return lines;
