@@ -14,6 +14,7 @@ using Itinero.Profiles;
 using Vehicle = Itinero.Osm.Vehicles.Vehicle;
 
 [assembly: InternalsVisibleTo("Itinero.MapMatching.Test")]
+[assembly: InternalsVisibleTo("Itinero.MapMatching.Test.Functional")]
 namespace Itinero.MapMatching
 {
     internal class MapMatcher
@@ -91,7 +92,7 @@ namespace Itinero.MapMatching
             return routes;
         }
 
-        private List<RouterPoint>[] ProjectionOnRoads(Track track)
+        internal List<RouterPoint>[] ProjectionOnRoads(Track track)
         {
             /* track point, projected point */
             var projection = new List<RouterPoint>[track.Count];
