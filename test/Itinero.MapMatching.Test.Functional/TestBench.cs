@@ -2,16 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using GeoAPI.Geometries;
-using Itinero;
 using Itinero.Geo;
 using Itinero.IO.Osm;
-using Itinero.MapMatching;
 using Itinero.MapMatching.Test.Functional.Domain;
 using Itinero.Profiles;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Operation.Buffer;
-using NetTopologySuite.Operation.Valid;
 using Newtonsoft.Json;
 using OsmSharp.Streams;
 using Vehicle = Itinero.Osm.Vehicles.Vehicle;
@@ -180,24 +177,27 @@ namespace Itinero.MapMatching.Test.Functional
         
         private static Track FromGeoJson(TextReader reader)
         {
+            var track = new List<(Itinero.LocalGeo.Coordinate, DateTime?, float?)>();
             var jsonSerializer = NetTopologySuite.IO.GeoJsonSerializer.Create();
             var featureCollection = jsonSerializer.Deserialize<FeatureCollection>(new JsonTextReader(reader));
             foreach (var feature in featureCollection.Features)
             {
                 if (feature.Geometry is LineString lineString)
                 {
-                    var track = new List<(Itinero.LocalGeo.Coordinate, DateTime?, float?)>();
-
-                    foreach (var c in lineString.Coordinates)
+                    for (var i = 0; i < lineString.Coordinates.Length; i++)
                     {
+                        if (track.Count > 0 && i == 0) continue;
+
+                        var c = lineString.Coordinates[i];
+                        
                         track.Add((new Itinero.LocalGeo.Coordinate((float)c.Y, (float)c.X), null, null));
                     }
-
-                    return new Track(track);
                 }
             }
+
+            if (track.Count == 0) throw new Exception("No track found.");
             
-            throw new Exception("Track not found.");
+            return new Track(track);
         }
     }
 }
