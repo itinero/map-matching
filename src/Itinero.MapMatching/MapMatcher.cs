@@ -8,8 +8,11 @@ using Itinero.LocalGeo;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Itinero.Algorithms;
+using Itinero.Algorithms.Matrices;
 using Itinero.Algorithms.Weights;
 using Itinero.Logging;
+using Itinero.MapMatching.Model;
+using Itinero.MapMatching.Routing;
 using Itinero.Profiles;
 using Vehicle = Itinero.Osm.Vehicles.Vehicle;
 
@@ -21,7 +24,6 @@ namespace Itinero.MapMatching
     {
         private readonly Router _router;
         private readonly Profile _profile;
-        private Result<EdgePath<float>>[] rawPaths;
 
         public MapMatcher(Router router, Profile profile)
         {
@@ -39,201 +41,168 @@ namespace Itinero.MapMatching
 
         public Result<MapMatcherResult> TryMatch(Track track)
         {
-            Itinero.Logging.Logger.Log($"{nameof(MapMatcher)}.{nameof(TryMatch)}", TraceEventType.Verbose,
-                $"Snapping points to road network...");
-            var projection = ProjectionOnRoads(track);
-            Itinero.Logging.Logger.Log($"{nameof(MapMatcher)}.{nameof(TryMatch)}", TraceEventType.Verbose,
-                $"Calculating emission probabilities...");
-            var emitP = EmitProbabilities(track, projection);
-            Itinero.Logging.Logger.Log($"{nameof(MapMatcher)}.{nameof(TryMatch)}", TraceEventType.Verbose,
-                $"Calculating transition probabilities...");
-            var transP = TransitionProbabilities(track, projection);
-            var startP = emitP[0];
-
-            Itinero.Logging.Logger.Log($"{nameof(MapMatcher)}.{nameof(TryMatch)}", TraceEventType.Verbose,
-                $"Running Viterbi...");
-            var (path, confidence) = Solver.ForwardViterbi(startP, transP, emitP);
-
-            var routerPoints = new RouterPoint[path.Length];
-            for (var i = 0; i < path.Length; i++)
-            {
-                routerPoints[i] = projection[i][path[i]];
-            }
-
-            var rpntLocProbs = new MapMatcherPoint[track.Count][];
-            for (var i = 0; i < rpntLocProbs.Length; i++)
-            {
-                rpntLocProbs[i] = new MapMatcherPoint[projection[i].Count];
-                for (var j = 0; j < rpntLocProbs[i].Length; j++)
-                {
-                    var routerPoint = projection[i][j];
-                    rpntLocProbs[i][j] = new MapMatcherPoint(
-                            routerPoint,
-                            routerPoint.LocationOnNetwork(_router.Db),
-                            emitP[i][j]);
-                }
-            }
-
-            // calculating a route should succeed, because a route has been calculated between
-            // these points in the transition probability calculation phase.
-            rawPaths = RouteThrough(routerPoints);
-
-            return new Result<MapMatcherResult>(new MapMatcherResult(track, _profile, rpntLocProbs, path, rawPaths));
-        }
-
-        private Result<EdgePath<float>>[] RouteThrough(IReadOnlyList<RouterPoint> points)
-        {
-            var routes = new Result<EdgePath<float>>[points.Count - 1];
-            for (var i = 0; i < points.Count - 1; i++)
-            {
-                routes[i] = _router.TryCalculateRaw(_profile, _router.GetDefaultWeightHandler(_profile), points[i], points[i + 1]);
-            }
-
-            return routes;
-        }
-
-        internal List<RouterPoint>[] ProjectionOnRoads(Track track)
-        {
-            /* track point, projected point */
-            var projection = new List<RouterPoint>[track.Count];
-
+            // build track model.
+            var trackModel = new TrackModel();
+            
+            // build location (vertices) of the model.
+            var locations = new List<(List<(RouterPoint rp, int modelId)> points, int trackIdx)>(track.Count);
             var isAcceptable = _router.GetIsAcceptable(_profile);
-
-            for (var id = 0; id < track.Count; id++)
+            var maxDistance = 100f; // max 100m.
+            for (var trackIdx = 0; trackIdx < track.Count; trackIdx++)
             {
+                // resolve to multiple possible locations.
                 var resolve = new ResolveMultipleAlgorithm(
                     _router.Db.Network.GeometricGraph,
-                        track[id].Location.Latitude, track[id].Location.Longitude,
-                        Offset(track[id].Location, _router.Db.Network), 100f /* meters */,
-                        isAcceptable, /* allow non-orthogonal projections */ true);
+                    track[trackIdx].Location.Latitude, track[trackIdx].Location.Longitude,
+                    Offset(track[trackIdx].Location, _router.Db.Network), maxDistance,
+                    isAcceptable, /* allow non-orthogonal projections */ true);
                 resolve.Run();
 
                 var points = resolve.HasSucceeded ? resolve.Results : new List<RouterPoint>();
-                projection[id] = /*UniqueLocations(*/points/*)*/;
-            }
 
-            return projection;
-        }
-
-        private Dictionary<int, float>[] EmitProbabilities(Track track, IReadOnlyList<List<RouterPoint>> projection)
-        {
-            var emitP = /* key track point (observation) */ new Dictionary<int /* segment */, float>[projection.Count];
-
-            // Assign probability according to zero-mean Gaussian distribution for each point
-
-            // Gaussian distributions have two factors: the mean (here 0) and standard deviation
-            const double measurementStandardDeviation = 5.0; // TODO
-            // log(1/x) = -log(x), and we only need the logarithm
-            var factor = (float) -Math.Log(Math.Sqrt(2 * Math.PI) * measurementStandardDeviation);
-
-            for (var trackPointId = 0; trackPointId < projection.Count; trackPointId++)
-            {
-                emitP[trackPointId] = new Dictionary<int, float>();
-
-                var routerPointId = 0;
-                foreach (var resolvedPoint in projection[trackPointId])
+                if (points.Count <= 0) continue; // no points found!
+                
+                var pointAndModel = new List<(RouterPoint rp, int modelId)>(points.Count);
+                // add each one as a vertex.
+                for (var p = 0; p < points.Count; p++)
                 {
-                    var origLoc     = resolvedPoint.Location();
-                    var resolvedLoc = resolvedPoint.LocationOnNetwork(_router.Db);
+                    var prob = ResolveProbability(points[p], maxDistance);
 
-                    // probability = log(1 / sqrt(2 * pi) / sigma * exp(-0.5 * distance(origLoc, resolvedLoc)))
-                    var logProbability = factor - 0.5f * Coordinate.DistanceEstimateInMeter(origLoc, resolvedLoc);
-
-                    emitP[trackPointId].Add(routerPointId, logProbability);
-
-                    routerPointId++;
+                    var modelId = trackModel.AddLocation((trackIdx, p), prob);
+                        
+                    pointAndModel.Add((points[p], modelId));
                 }
+                    
+                locations.Add((pointAndModel, trackIdx));
             }
-
-            return emitP;
-        }
-
-        private Dictionary<int, Dictionary<int, float>>[] TransitionProbabilities(
-                Track track, IReadOnlyList<List<RouterPoint>> projection)
-        {
-            var transitP = new Dictionary<int, Dictionary<int, float>>[projection.Count];
-
-            // Assign probability according to exponential distribution for each state transition
-
-            // Exponential distributions have one factor: the mean (= 1/λ)
-            const double mean = 30.0; // TODO
-            // log(1/x) = -log(x), and we only need the logarithm
-            var factor = (float) -Math.Log(mean);
-
-            // These nested loops iterate over each track point in `projection` together with their successor
-
-            for (var trackPointId = 0; trackPointId < projection.Count - 1; trackPointId++)
+            
+            // close the model, as in 'no more vertices'.
+            trackModel.Close();
+            
+            // build transit probabilities.
+            for (var trackIdx = 1; trackIdx < locations.Count; trackIdx++)
             {
-                //Console.Write("\r{0}/{1}", trackPointId + 1, projection.Count - 1);
+                var sourceL = locations[trackIdx - 1];
+                var targetL = locations[trackIdx - 0];
+                
+                // TODO: is this a good maximum and minimum?
+                var distance = Coordinate.DistanceEstimateInMeter(
+                    track[sourceL.trackIdx].Location,
+                    track[targetL.trackIdx].Location);
+                var maxSearchDistance = distance* 2;
+                if (maxSearchDistance < 20) maxSearchDistance = 20;
+                
+                var sources = locations[trackIdx - 1].points.Select(x => x.rp).ToList();
+                var targets = locations[trackIdx - 0].points.Select(x => x.rp).ToList();
 
-                transitP[trackPointId + 1] = new Dictionary<int, Dictionary<int, float>>();
+                var weights = _router.CalculateManyToManyDirected(_profile, sources,
+                    targets, maxSearchDistance); 
 
-                var sources = projection[trackPointId].ToArray();
-                var targets = projection[trackPointId + 1].ToArray();
-                var failedSources = new HashSet<int>();
-                var failedTargets = new HashSet<int>();
-
-                var weights = _router.TryCalculateWeight(
-                        _profile, _router.GetDefaultWeightHandler(_profile),
-                        sources, targets,
-                        failedSources, failedTargets);
-
-                if (weights.IsError)
+                for (var s = 0; s < sources.Count; s++)
+                for (var t = 0; t < targets.Count; t++)
                 {
-                    Itinero.Logging.Logger.Log($"{nameof(MapMatcher)}.{nameof(TransitionProbabilities)}", TraceEventType.Error,
-                        $"Error while calculating routes: {weights.ErrorMessage}");
-                    continue;
-                }
-
-                if (failedSources.Count > 0) Console.Error.WriteLine($"\n  Warning: Has {failedSources.Count}/{sources.Length} failed sources");
-                else if (failedTargets.Count > 0) Console.Error.WriteLine();
-                if (failedTargets.Count > 0) Console.Error.WriteLine($"  Warning: Has {failedTargets.Count}/{targets.Length} failed targets");
-
-                var fromTrackPoint = track[trackPointId].Location;
-                var toTrackPoint = track[trackPointId + 1].Location;
-
-                for (var toRouterPointId = 0; toRouterPointId < projection[trackPointId + 1].Count; toRouterPointId++)
-                {
-                    transitP[trackPointId + 1].Add(toRouterPointId, new Dictionary<int, float>());
-
-                    for (var fromRouterPointId = 0; fromRouterPointId < projection[trackPointId].Count; fromRouterPointId++)
+                    var sourceModelId = locations[trackIdx - 1].points[s].modelId;
+                    var targetModelId = locations[trackIdx - 0].points[t].modelId;
+                    
+                    var w = weights[s * 2 + 0][t * 2 + 0];
+                    if (w < float.MaxValue)
                     {
-                        var routeDistance = weights.Value[fromRouterPointId][toRouterPointId];
-                        if (routeDistance >= float.MaxValue) continue;
-
-                        var gcircDistance = Coordinate.DistanceEstimateInMeter(fromTrackPoint, toTrackPoint);
-
-                        // why Abs? because routeDistance - gcircDistance may be negative if
-                        // snapped points are closer than original points
-                        var routeVsGcircDifference = Math.Abs(routeDistance - gcircDistance);
-
-                /*
-                        // sanity check: disregard routes that make large detours
-                        // TODO just a guess, we should empirically test this
-                        if (routeDistance > 50.0f + gcircDistance * 5.0f) continue;
-
-                        // sanity check: disregard routes that require insane speeds
-                        DateTime? fromTime = track.Points[trackPointId].Time;
-                        DateTime? toTime = track.Points[trackPointId + 1].Time;
-                        if (fromTime.HasValue && toTime.HasValue)
-                        {
-                            // FIXME hardcoded for bikes
-                            // 100 km/h ≅ 27 m/s
-                            // speed = dist/time > 27 m/s  ⇔  dist > time * 27 m/s
-                            if (routeDistance > (toTime.Value - fromTime.Value).TotalSeconds * 27.77777f)
-                                continue;
-                        }
-                */
-
-                        // probability = 1 / beta * Math.Exp(-0.5 * routeVsGcircDifference)
-                        var logProbability = factor - 0.5f * routeVsGcircDifference;
-
-                        transitP[trackPointId + 1][toRouterPointId].Add(fromRouterPointId, logProbability);
+                        w = RouteProbability(w, distance, maxSearchDistance);
+                        trackModel.AddTransit(sourceModelId, targetModelId, true, true, w);
+                    }
+                    w = weights[s * 2 + 0][t * 2 + 1];
+                    if (w < float.MaxValue)
+                    {
+                        w = RouteProbability(w, distance, maxSearchDistance);
+                        trackModel.AddTransit(sourceModelId, targetModelId, true, false, w);
+                    }
+                    w = weights[s * 2 + 1][t * 2 + 0];
+                    if (w < float.MaxValue)
+                    {
+                        w = RouteProbability(w, distance, maxSearchDistance);
+                        trackModel.AddTransit(sourceModelId, targetModelId, false, true, w);
+                    }
+                    w = weights[s * 2 + 1][t * 2 + 1];
+                    if (w < float.MaxValue)
+                    {
+                        w = RouteProbability(w, distance, maxSearchDistance);
+                        trackModel.AddTransit(sourceModelId, targetModelId, false, false, w);
                     }
                 }
             }
+            
+            // calculate the most efficient 'route' through the model.
+            var bestMatch = trackModel.BestPath();
+            
+            // build the paths.
+            var weightHandler = _router.GetDefaultWeightHandler(_profile);
+            var settings = new RoutingSettings<float>()
+            {
+                DirectionAbsolute = true,
+            };
 
-            return transitP;
+            var rawPaths = new List<EdgePath<float>>();
+            var chosenPoints = new List<RouterPoint>();
+            for (var l = 1; l < bestMatch.Count; l++)
+            {
+                var source = bestMatch[l - 1];
+                var sourceRp = locations[source.track].points[source.point].rp;
+                var target = bestMatch[l - 0];
+                var targetRp = locations[target.track].points[target.point].rp;
+                
+                var maxSearchDistance = Coordinate.DistanceEstimateInMeter(
+                                            sourceRp.Location(),
+                                            targetRp.Location()) * 2;
+                settings.SetMaxSearch(_profile.FullName, maxSearchDistance);
+                if (chosenPoints.Count == 0)
+                {
+                    chosenPoints.Add(sourceRp);
+                }
+                chosenPoints.Add(targetRp);
+                
+                var rawPath = _router.TryCalculateRaw(_profile, weightHandler, sourceRp, source.departure,
+                    targetRp, target.arrival, settings);
+                if (rawPath.IsError)
+                {
+                    throw new Exception("Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before.");
+                }
+                rawPaths.Add(rawPath.Value);
+            }
+
+            return new Result<MapMatcherResult>(
+                new MapMatcherResult(_router.Db, track, _profile, chosenPoints.ToArray(), rawPaths));
+        }
+
+        private float ResolveProbability(RouterPoint resolvedPoint, float maxDistance)
+        {
+            // Assign probability according to zero-mean Gaussian distribution for each point
+
+            // TODO: improve again using the same distribution, for now too simple.
+//            // Gaussian distributions have two factors: the mean (here 0) and standard deviation
+//            const double measurementStandardDeviation = 5.0; // TODO
+//            // log(1/x) = -log(x), and we only need the logarithm
+//            var factor = (float) -Math.Log(Math.Sqrt(2 * Math.PI) * measurementStandardDeviation);
+//
+//            var origLoc = resolvedPoint.Location();
+//            var resolvedLoc = resolvedPoint.LocationOnNetwork(_router.Db);
+//
+//            // probability = log(1 / sqrt(2 * pi) / sigma * exp(-0.5 * distance(origLoc, resolvedLoc)))
+//            return factor - 0.5f * Coordinate.DistanceEstimateInMeter(origLoc, resolvedLoc);
+            
+            var origLoc = resolvedPoint.Location();
+            var resolvedLoc = resolvedPoint.LocationOnNetwork(_router.Db);
+
+            return System.Math.Abs(Coordinate.DistanceEstimateInMeter(origLoc, resolvedLoc) / maxDistance);
+        }
+
+        private float RouteProbability(float routeDistance, float locationDistance, float maxDistance)
+        {
+            // TODO: improve, for now too simple.
+            if (System.Math.Abs(routeDistance) > locationDistance * 2)
+            {
+                return 1;
+            }
+            return System.Math.Abs(routeDistance - locationDistance) / maxDistance;
         }
 
         static float Offset(Coordinate centerLocation, Itinero.Data.Network.RoutingNetwork routingNetwork)
@@ -245,31 +214,5 @@ namespace Itinero.MapMatching
             return System.Math.Max(latitudeOffset, longitudeOffset);
         }
 
-        private static List<RouterPoint> UniqueLocations(IReadOnlyList<RouterPoint> points)
-        {
-            var uniquePoints = new List<RouterPoint>();
-            for (var i = 0; i < points.Count; i++)
-            {
-                bool CloseBy(RouterPoint seenPoint) => Math.Abs(points[i].Location().Latitude - seenPoint.Location().Latitude) <= 0.000001f && Math.Abs(points[i].Location().Longitude - seenPoint.Location().Longitude) <= 0.000001f;
-
-                if (!Any(CloseBy, uniquePoints))
-                {
-                    uniquePoints.Add(points[i]);
-                }
-            }
-            return uniquePoints;
-        }
-
-        private static bool Any<T>(Func<T, bool> f, IEnumerable<T> collection)
-        {
-            foreach (var item in collection)
-            {
-                if (f(item))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
     }
 }

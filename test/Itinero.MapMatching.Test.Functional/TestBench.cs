@@ -99,14 +99,14 @@ namespace Itinero.MapMatching.Test.Functional
                 if (!expectedBuffered.Covers(routeLineString))
                 {
                     File.WriteAllText(test.TrackFile + ".failed.geojson",
-                        BuildErrorOutput(router, route, result.ChosenProjectionPoints, expectedBuffered, track).ToGeoJson());
+                        BuildErrorOutput(router, route, result.RouterPoints, expectedBuffered, track).ToGeoJson());
                     return (false, "Route outside of expected buffer.");
                 }
 #if DEBUG
                 else
                 {
                     File.WriteAllText(test.TrackFile + ".expected.geojson",
-                        BuildErrorOutput(router, route, result.ChosenProjectionPoints, expectedBuffered, track).ToGeoJson());
+                        BuildErrorOutput(router, route, result.RouterPoints, expectedBuffered, track).ToGeoJson());
                 }
 #endif
 
@@ -118,7 +118,7 @@ namespace Itinero.MapMatching.Test.Functional
             }
         }
 
-        private static FeatureCollection BuildErrorOutput(Router router, Route route, IEnumerable<MapMatcherPoint> points, IGeometry buffer,
+        private static FeatureCollection BuildErrorOutput(Router router, Route route, IEnumerable<RouterPoint> points, IGeometry buffer,
             Track track)
         {
             var features = new FeatureCollection();
@@ -131,13 +131,13 @@ namespace Itinero.MapMatching.Test.Functional
             {
                 features.Add(new Feature(new LineString(new []
                 {
-                    new Coordinate(point.RouterPoint.Location().Longitude, 
-                        point.RouterPoint.Location().Latitude),
-                    new Coordinate(point.RouterPoint.LocationOnNetwork(router.Db).Longitude,
-                        point.RouterPoint.LocationOnNetwork(router.Db).Latitude), 
+                    new Coordinate(point.Location().Longitude, 
+                        point.Location().Latitude),
+                    new Coordinate(point.LocationOnNetwork(router.Db).Longitude,
+                        point.LocationOnNetwork(router.Db).Latitude), 
                 }), new AttributesTable{{"type", "snapline"}}));
-                coordinates.Add(new Coordinate(point.RouterPoint.Location().Longitude, 
-                    point.RouterPoint.Location().Latitude));
+                coordinates.Add(new Coordinate(point.Location().Longitude, 
+                    point.Location().Latitude));
             }
             var lineString = new LineString(coordinates.ToArray());
             features.Add(new Feature(lineString, new AttributesTable{{ "type", "track"}}));
