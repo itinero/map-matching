@@ -103,36 +103,47 @@ namespace Itinero.MapMatching
                 {
                     var sourceModelId = locations[trackIdx - 1].points[s].modelId;
                     var targetModelId = locations[trackIdx - 0].points[t].modelId;
-                    
+
+                    bool hasRoute = false;
                     var w = weights[s * 2 + 0][t * 2 + 0];
                     if (w < float.MaxValue)
                     {
+                        hasRoute = true;
                         w = RouteProbability(w, distance, maxSearchDistance);
                         trackModel.AddTransit(sourceModelId, targetModelId, true, true, w);
                     }
                     w = weights[s * 2 + 0][t * 2 + 1];
                     if (w < float.MaxValue)
                     {
+                        hasRoute = true;
                         w = RouteProbability(w, distance, maxSearchDistance);
                         trackModel.AddTransit(sourceModelId, targetModelId, true, false, w);
                     }
                     w = weights[s * 2 + 1][t * 2 + 0];
                     if (w < float.MaxValue)
                     {
+                        hasRoute = true;
                         w = RouteProbability(w, distance, maxSearchDistance);
                         trackModel.AddTransit(sourceModelId, targetModelId, false, true, w);
                     }
                     w = weights[s * 2 + 1][t * 2 + 1];
                     if (w < float.MaxValue)
                     {
+                        hasRoute = true;
                         w = RouteProbability(w, distance, maxSearchDistance);
                         trackModel.AddTransit(sourceModelId, targetModelId, false, false, w);
+                    }
+
+                    if (hasRoute)
+                    {
+                        return new Result<MapMatcherResult>($"Could not find a path between {sourceL.trackIdx} and {targetL.trackIdx}");
                     }
                 }
             }
             
             // calculate the most efficient 'route' through the model.
             var bestMatch = trackModel.BestPath();
+            if (bestMatch == null) return new Result<MapMatcherResult>("Could not match the track.");
             
             // build the paths.
             var weightHandler = _router.GetDefaultWeightHandler(_profile);

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Itinero.Graphs;
+using Itinero.Graphs.Directed;
 
 namespace Itinero.MapMatching.Model
 {
@@ -12,7 +13,7 @@ namespace Itinero.MapMatching.Model
     internal class TrackModel
     {
         private readonly List<(int track, int point, float prob)> _vertices = new List<(int track, int point, float prob)>(); 
-        private readonly Graph _graph = new Graph(1);
+        private readonly DirectedGraph _graph = new DirectedGraph(1);
         private readonly float _uTurnCost;
 
         /// <summary>
@@ -23,17 +24,20 @@ namespace Itinero.MapMatching.Model
             _uTurnCost = uTurnCost;
             
             // add the start vertex.
-            _graph.AddVertex(0);
             _vertices.Add((-1, -1, 1));
             
             // add end vertex.
-            _graph.AddVertex(1);
             _vertices.Add((-1, -1, 1));
         }
 
         private static uint ToEdgeWeight(float cost)
         {
             return (uint) (cost * 1000000);
+        }
+
+        internal static float FromEdgeWeight(uint weight)
+        {
+            return (weight / 1000000f);
         }
 
         private static uint LocationIdToVertex(int id, bool forward)
@@ -60,8 +64,6 @@ namespace Itinero.MapMatching.Model
             // add one that represent forward, one that represents backward.
             var vf = LocationIdToVertex(id, true);
             var vb = LocationIdToVertex(id, false);
-            _graph.AddVertex(vf);
-            _graph.AddVertex(vb);
             
             // add u-turns.
             _graph.AddEdge(vf, vb, ToEdgeWeight(_uTurnCost));
@@ -108,6 +110,21 @@ namespace Itinero.MapMatching.Model
             var v2 = LocationIdToVertex(location2, forward2);
 
             _graph.AddEdge(v1, v2, ToEdgeWeight(cost));
+        }
+
+        internal uint Start => 0;
+
+        internal uint End => 1;
+
+        internal DirectedGraph.EdgeEnumerator Enumerator => _graph.GetEdgeEnumerator();
+
+        internal (int track, int point, bool forward) GetVertexDetails(uint vertex)
+        {
+            var id = vertex / 2;
+            var offset = (vertex - (id * 2));
+
+            var vDetails = _vertices[(int)id];
+            return (vDetails.track, vDetails.point, offset == 0);
         }
     }
 }

@@ -1,7 +1,5 @@
 using Itinero.Attributes;
-using Itinero.IO.Osm;
 using Itinero.LocalGeo;
-using OsmSharp.Tags;
 using Xunit;
 
 namespace Itinero.MapMatching.Test
