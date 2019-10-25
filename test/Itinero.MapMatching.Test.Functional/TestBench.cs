@@ -57,13 +57,7 @@ namespace Itinero.MapMatching.Test.Functional
 #if DEBUG
                 File.WriteAllText(test.OsmDataFile + ".geojson", routerDb.GetGeoJson());
 #endif
-
-                // contract if needed.
-                if (test.Profile.Contract)
-                {
-                    routerDb.AddContracted(Vehicle.Bicycle.Shortest());
-                }
-
+                
                 // test route.
                 Track track;
                 if (test.TrackFile.EndsWith(".tsv"))
@@ -82,10 +76,10 @@ namespace Itinero.MapMatching.Test.Functional
                 }
 
                 var router = new Router(routerDb);
-                var profile = router.Db.GetSupportedProfile(test.Profile.Name);
-                var matcher = new MapMatcher(router, profile);
-                
-                var mapMatchResult = router.Match(profile, track);
+                var mapMatchResult = router.Match(track, new MapMatcherSettings()
+                {
+                    Profile = vehicle.Shortest().FullName
+                });
                 if (mapMatchResult.IsError)
                 {
                     return (false, mapMatchResult.ErrorMessage);

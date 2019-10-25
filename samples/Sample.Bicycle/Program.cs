@@ -28,7 +28,10 @@ namespace Sample.Bicycle
             }
 
             // do map matching.
-            var mapMatcherResult = router.Match(router.Db.GetSupportedProfile("bicycle.shortest"), track).Value;
+            var mapMatcherResult = router.Match(track, new MapMatcherSettings
+            {
+                Profile = "bicycle.shortest"
+            }).Value;
             var route = router.ToRoute(mapMatcherResult);
             if (args.Length >= 2 && args[2].Length > 0 && !args[2].Equals("-"))
             {
@@ -52,7 +55,7 @@ namespace Sample.Bicycle
             return 0;
         }
 
-        static void PrintHelp(TextWriter writer)
+        private static void PrintHelp(TextWriter writer)
         {
             writer.WriteLine("Usage:\n  dotnet run -- <routerdb> <tsv gps log> [matched route output file] [projection to points output file]");
         }

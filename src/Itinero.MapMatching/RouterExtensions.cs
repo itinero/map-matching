@@ -11,12 +11,12 @@ namespace Itinero.MapMatching
         /// Matches the given track using the given profile to the road network.
         /// </summary>
         /// <param name="router">The router.</param>
-        /// <param name="profile">The profile to use.</param>
         /// <param name="track">The track to match.</param>
-        /// <returns></returns>
-        public static Result<MapMatcherResult> Match(this Router router, Profile profile, Track track)
+        /// <param name="settings">The settings to use.</param>
+        /// <returns>Map matcher results.</returns>
+        public static Result<MapMatcherResult> Match(this Router router, Track track, MapMatcherSettings settings = null)
         {
-            var matcher = new MapMatcher(router, profile);
+            var matcher = new MapMatcher(router, settings);
             return matcher.TryMatch(track);
         }
 

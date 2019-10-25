@@ -19,10 +19,13 @@ namespace Itinero.MapMatching.Model
             
             var heap = new BinaryHeap<EdgePath<float>>(1024);
             heap.Push(new EdgePath<float>(model.Start), 0);
+            var settled = new HashSet<uint>();
 
             while (heap.Count > 0)
             {
                 var settle = heap.Pop();
+                if (settled.Contains(settle.Vertex)) continue;
+                settled.Add(settle.Vertex);
 
                 if (settle.Vertex == model.End)
                 {

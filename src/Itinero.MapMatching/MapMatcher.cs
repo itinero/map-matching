@@ -1,20 +1,13 @@
 ﻿using System;
-using System.IO;
 using System.Collections.Generic;
-using Itinero;
 using Itinero.Algorithms.Search;
-using Itinero.IO.Json;
 using Itinero.LocalGeo;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Itinero.Algorithms;
-using Itinero.Algorithms.Matrices;
-using Itinero.Algorithms.Weights;
-using Itinero.Logging;
 using Itinero.MapMatching.Model;
 using Itinero.MapMatching.Routing;
 using Itinero.Profiles;
-using Vehicle = Itinero.Osm.Vehicles.Vehicle;
 
 [assembly: InternalsVisibleTo("Itinero.MapMatching.Test")]
 [assembly: InternalsVisibleTo("Itinero.MapMatching.Test.Functional")]
@@ -24,19 +17,19 @@ namespace Itinero.MapMatching
     {
         private readonly Router _router;
         private readonly Profile _profile;
+        private readonly MapMatcherSettings _settings;
 
-        public MapMatcher(Router router, Profile profile)
+        public MapMatcher(Router router, MapMatcherSettings settings = null)
         {
+            if (settings == null) settings = MapMatcherSettings.Default;
+            _settings = settings;
+            
+            var profile = router.Db.GetSupportedProfile(settings.Profile);
             if (profile.Metric != ProfileMetric.DistanceInMeters) { throw new ArgumentException(
                 $"Only profiles supported with distance as metric.", $"{nameof(profile)}"); }
             
             _router = router;
             _profile = profile;
-        }
-
-        public MapMatcherResult Match(Track track)
-        {
-            return TryMatch(track).Value;
         }
 
         public Result<MapMatcherResult> TryMatch(Track track)
@@ -47,7 +40,7 @@ namespace Itinero.MapMatching
             // build location (vertices) of the model.
             var locations = new List<(List<(RouterPoint rp, int modelId)> points, int trackIdx)>(track.Count);
             var isAcceptable = _router.GetIsAcceptable(_profile);
-            var maxDistance = 100f; // max 100m.
+            var maxDistance = _settings.SnappingMaxDistance;
             for (var trackIdx = 0; trackIdx < track.Count; trackIdx++)
             {
                 // resolve to multiple possible locations.
@@ -66,7 +59,7 @@ namespace Itinero.MapMatching
                 // add each one as a vertex.
                 for (var p = 0; p < points.Count; p++)
                 {
-                    var prob = ResolveProbability(points[p], maxDistance);
+                    var prob = ResolveProbability(points[p]);
 
                     var modelId = trackModel.AddLocation((trackIdx, p), prob);
                         
@@ -84,27 +77,26 @@ namespace Itinero.MapMatching
             {
                 var sourceL = locations[trackIdx - 1];
                 var targetL = locations[trackIdx - 0];
-                
-                // TODO: is this a good maximum and minimum?
+
                 var distance = Coordinate.DistanceEstimateInMeter(
                     track[sourceL.trackIdx].Location,
                     track[targetL.trackIdx].Location);
-                var maxSearchDistance = distance* 2;
-                if (maxSearchDistance < 20) maxSearchDistance = 20;
-                
+                var maxSearchDistance = distance * _settings.RouteDistanceFactor;
+                if (maxSearchDistance < _settings.MinRouteDistance) maxSearchDistance = _settings.MinRouteDistance;
+
                 var sources = locations[trackIdx - 1].points.Select(x => x.rp).ToList();
                 var targets = locations[trackIdx - 0].points.Select(x => x.rp).ToList();
 
                 var weights = _router.CalculateManyToManyDirected(_profile, sources,
-                    targets, maxSearchDistance); 
+                    targets, maxSearchDistance);
 
+                var hasRoute = false;
                 for (var s = 0; s < sources.Count; s++)
                 for (var t = 0; t < targets.Count; t++)
                 {
                     var sourceModelId = locations[trackIdx - 1].points[s].modelId;
                     var targetModelId = locations[trackIdx - 0].points[t].modelId;
 
-                    bool hasRoute = false;
                     var w = weights[s * 2 + 0][t * 2 + 0];
                     if (w < float.MaxValue)
                     {
@@ -112,6 +104,7 @@ namespace Itinero.MapMatching
                         w = RouteProbability(w, distance, maxSearchDistance);
                         trackModel.AddTransit(sourceModelId, targetModelId, true, true, w);
                     }
+
                     w = weights[s * 2 + 0][t * 2 + 1];
                     if (w < float.MaxValue)
                     {
@@ -119,6 +112,7 @@ namespace Itinero.MapMatching
                         w = RouteProbability(w, distance, maxSearchDistance);
                         trackModel.AddTransit(sourceModelId, targetModelId, true, false, w);
                     }
+
                     w = weights[s * 2 + 1][t * 2 + 0];
                     if (w < float.MaxValue)
                     {
@@ -126,6 +120,7 @@ namespace Itinero.MapMatching
                         w = RouteProbability(w, distance, maxSearchDistance);
                         trackModel.AddTransit(sourceModelId, targetModelId, false, true, w);
                     }
+
                     w = weights[s * 2 + 1][t * 2 + 1];
                     if (w < float.MaxValue)
                     {
@@ -133,14 +128,15 @@ namespace Itinero.MapMatching
                         w = RouteProbability(w, distance, maxSearchDistance);
                         trackModel.AddTransit(sourceModelId, targetModelId, false, false, w);
                     }
+                }
 
-                    if (hasRoute)
-                    {
-                        return new Result<MapMatcherResult>($"Could not find a path between {sourceL.trackIdx} and {targetL.trackIdx}");
-                    }
+                if (!hasRoute)
+                {
+                    return new Result<MapMatcherResult>(
+                        $"Could not find a path between {sourceL.trackIdx} and {targetL.trackIdx}");
                 }
             }
-            
+
             // calculate the most efficient 'route' through the model.
             var bestMatch = trackModel.BestPath();
             if (bestMatch == null) return new Result<MapMatcherResult>("Could not match the track.");
@@ -163,7 +159,7 @@ namespace Itinero.MapMatching
                 
                 var maxSearchDistance = Coordinate.DistanceEstimateInMeter(
                                             sourceRp.Location(),
-                                            targetRp.Location()) * 2;
+                                            targetRp.Location()) * _settings.RouteDistanceFactor;
                 settings.SetMaxSearch(_profile.FullName, maxSearchDistance);
                 if (chosenPoints.Count == 0)
                 {
@@ -183,37 +179,56 @@ namespace Itinero.MapMatching
             return new Result<MapMatcherResult>(
                 new MapMatcherResult(_router.Db, track, _profile, chosenPoints.ToArray(), rawPaths));
         }
-
-        private float ResolveProbability(RouterPoint resolvedPoint, float maxDistance)
+        
+        private double GPSMeasurementProbability(float distance)
         {
-            // Assign probability according to zero-mean Gaussian distribution for each point
+            // TODO this is estimated in the paper, do we do the same here based on the data.
+            // now we just use the max snapping distance.
+            double measurementStandardDeviation = (_settings.SnappingMaxDistance / 5);
 
-            // TODO: improve again using the same distribution, for now too simple.
-//            // Gaussian distributions have two factors: the mean (here 0) and standard deviation
-//            const double measurementStandardDeviation = 5.0; // TODO
-//            // log(1/x) = -log(x), and we only need the logarithm
-//            var factor = (float) -Math.Log(Math.Sqrt(2 * Math.PI) * measurementStandardDeviation);
-//
-//            var origLoc = resolvedPoint.Location();
-//            var resolvedLoc = resolvedPoint.LocationOnNetwork(_router.Db);
-//
-//            // probability = log(1 / sqrt(2 * pi) / sigma * exp(-0.5 * distance(origLoc, resolvedLoc)))
-//            return factor - 0.5f * Coordinate.DistanceEstimateInMeter(origLoc, resolvedLoc);
+            var factor = 1; // (Math.Sqrt(2 * Math.PI) * measurementStandardDeviation);
+
+            var exp = Math.Exp(-0.5 * System.Math.Pow(distance / measurementStandardDeviation, 2));
             
+            return factor * exp;
+        }
+
+        private float ResolveProbability(RouterPoint resolvedPoint)
+        {
             var origLoc = resolvedPoint.Location();
             var resolvedLoc = resolvedPoint.LocationOnNetwork(_router.Db);
+            
+            var greatCircle = System.Math.Abs(Coordinate.DistanceEstimateInMeter(origLoc, resolvedLoc));
 
-            return System.Math.Abs(Coordinate.DistanceEstimateInMeter(origLoc, resolvedLoc) / maxDistance);
+            var prob = (float)GPSMeasurementProbability(greatCircle);
+            //Console.WriteLine($"{greatCircle}: {prob} ({1-prob})");
+            return 1 - prob;
+        }
+
+        private double TransitionProbability(float routeDistance, float locationDistance)
+        {
+            // TODO this is estimated in the paper, do we do the same here based on the data.
+            // now we just use the max snapping distance.
+            var beta = _settings.SnappingMaxDistance; 
+
+            var factor = 1;// / beta;
+
+            var exp = Math.Exp(-System.Math.Abs(routeDistance - locationDistance) / beta);
+
+            return factor * exp;
         }
 
         private float RouteProbability(float routeDistance, float locationDistance, float maxDistance)
         {
             // TODO: improve, for now too simple.
-            if (System.Math.Abs(routeDistance) > locationDistance * 2)
+            if (System.Math.Abs(routeDistance) > locationDistance * _settings.RouteDistanceFactor)
             {
                 return 1;
             }
-            return System.Math.Abs(routeDistance - locationDistance) / maxDistance;
+            var prob = (float)TransitionProbability(routeDistance, locationDistance);
+            //Console.WriteLine($"{routeDistance},{locationDistance} -> {System.Math.Abs(routeDistance - locationDistance)}: {prob} ({1-prob})");
+            return 1-prob;
+//            return (((System.Math.Abs(routeDistance - locationDistance) / maxDistance)));
         }
 
         static float Offset(Coordinate centerLocation, Itinero.Data.Network.RoutingNetwork routingNetwork)
@@ -224,6 +239,5 @@ namespace Itinero.MapMatching
 
             return System.Math.Max(latitudeOffset, longitudeOffset);
         }
-
     }
 }
