@@ -27,7 +27,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\itinero\routing\src\Itinero\Itinero.csproj" />
+    <PackageReference Include="Itinero" Version="1.6.0-pre013" />
   </ItemGroup>
 
+  
 </Project>

@@ -12,8 +12,12 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
   </ItemGroup>
 
+
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\itinero\routing\src\Itinero.IO.Osm\Itinero.IO.Osm.csproj" />
+    <PackageReference Include="Itinero.IO.Osm" Version="1.6.0-pre013" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Itinero.MapMatching\Itinero.MapMatching.csproj" />
   </ItemGroup>
 
