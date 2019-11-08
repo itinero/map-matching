@@ -14,7 +14,7 @@ namespace Itinero.MapMatching
         /// <param name="track">The track to match.</param>
         /// <param name="settings">The settings to use.</param>
         /// <returns>Map matcher results.</returns>
-        public static Result<MapMatcherResult> Match(this Router router, Track track, MapMatcherSettings settings = null)
+        public static Result<MapMatch> Match(this Router router, Track track, MapMatcherSettings settings = null)
         {
             var matcher = new MapMatcher(router, settings);
             return matcher.TryMatch(track);
@@ -26,21 +26,16 @@ namespace Itinero.MapMatching
         /// <param name="router">The router.</param>
         /// <param name="result">The result.</param>
         /// <returns>A route along the map matched result, possibly there are gaps.</returns>
-        public static Route ToRoute(this Router router, MapMatcherResult result)
+        public static Route ToRoute(this Router router, MapMatch result)
         {
             if (result.RouterPoints.Length <= 1) return null;
 
-            var route = router.BuildRoute(result.Profile, router.GetDefaultWeightHandler(result.Profile),
-                result.RouterPoints[0], result.RouterPoints[1], result.RawPaths[0]).Value;
-            for (var i = 2; i < result.RouterPoints.Length; i++)
-            {
-                var nextRoute = router.BuildRoute(result.Profile, router.GetDefaultWeightHandler(result.Profile),
-                    result.RouterPoints[i - 1], result.RouterPoints[i],
-                    result.RawPaths[i - 1]).Value;
-                route = route.Concatenate(nextRoute);
-            }
+            // convert to an edge path.
+            var path = router.Db.ToEdgePath(result.Path);
 
-            return route;
+            // build the route.
+            return router.BuildRoute(result.Profile, router.GetDefaultWeightHandler(result.Profile),
+                result.RouterPoints[0], result.RouterPoints[1], path).Value;
         }
     }
 }

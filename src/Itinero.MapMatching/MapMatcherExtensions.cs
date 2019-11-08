@@ -5,7 +5,7 @@ namespace Itinero.MapMatching
     /// </summary>
     public static class MapMatcherExtensions
     {
-        internal static MapMatcherResult Match(this MapMatcher matcher, Track track)
+        internal static MapMatch Match(this MapMatcher matcher, Track track)
         {
             return matcher.TryMatch(track).Value;
         }

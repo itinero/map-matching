@@ -1,0 +1,22 @@
+{
+    "description": "A real-life track.",
+    "profile": {
+        "name": "bicycle.shortest",
+        "file": "data/bicycle.lua"
+    },
+    "trackfile": "data/bicycle/test9-track.geojson",
+    "osmdatafile": "data/bicycle/test9-network.osm.pbf",
+    "expected": {
+        "type": "LineString",
+        "coordinates": [
+            [
+                4.867968,
+                51.240824
+            ],
+            [
+                4.867999,
+                51.237829
+            ]
+        ]
+    }
+}

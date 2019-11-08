@@ -32,7 +32,7 @@ namespace Itinero.MapMatching
             _profile = profile;
         }
 
-        public Result<MapMatcherResult> TryMatch(Track track)
+        public Result<MapMatch> TryMatch(Track track)
         {
             // build track model.
             var trackModel = new TrackModel();
@@ -132,14 +132,14 @@ namespace Itinero.MapMatching
 
                 if (!hasRoute)
                 {
-                    return new Result<MapMatcherResult>(
+                    return new Result<MapMatch>(
                         $"Could not find a path between {sourceL.trackIdx} and {targetL.trackIdx}");
                 }
             }
 
             // calculate the most efficient 'route' through the model.
             var bestMatch = trackModel.BestPath();
-            if (bestMatch == null) return new Result<MapMatcherResult>("Could not match the track.");
+            if (bestMatch == null) return new Result<MapMatch>("Could not match the track.");
             
             // build the paths.
             var weightHandler = _router.GetDefaultWeightHandler(_profile);
@@ -176,8 +176,8 @@ namespace Itinero.MapMatching
                 rawPaths.Add(rawPath.Value);
             }
 
-            return new Result<MapMatcherResult>(
-                new MapMatcherResult(_router.Db, track, _profile, chosenPoints.ToArray(), rawPaths));
+            return new Result<MapMatch>(
+                new MapMatch(_router.Db, track, _profile, chosenPoints.ToArray(), rawPaths));
         }
         
         private double GPSMeasurementProbability(float distance)
