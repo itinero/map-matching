@@ -29,7 +29,7 @@ namespace Itinero.MapMatching
                 paths.Add(routerDb.ToMapMatchPath(rawPaths[i], routerPoints[i], routerPoints[i + 1]));
             }
             _paths = paths;
-            
+             
             this.Path = _paths.Merge();
             this.RouterPoints = routerPoints;
         }

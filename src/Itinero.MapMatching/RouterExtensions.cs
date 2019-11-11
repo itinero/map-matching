@@ -35,7 +35,7 @@ namespace Itinero.MapMatching
 
             // build the route.
             return router.BuildRoute(result.Profile, router.GetDefaultWeightHandler(result.Profile),
-                result.RouterPoints[0], result.RouterPoints[1], path).Value;
+                result.RouterPoints[0], result.RouterPoints[result.RouterPoints.Length - 1], path).Value;
         }
     }
 }

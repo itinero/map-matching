@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Itinero.Algorithms;
 using Itinero.Data.Network;
 using Itinero.MapMatching.Routing;
@@ -40,6 +41,23 @@ namespace Itinero.MapMatching
         /// Gets the end offset.
         /// </summary>
         public ushort EndOffset { get; }
+        
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            var text = new StringBuilder();
+            text.Append($"{this.StartOffset/(double)ushort.MaxValue*100:F2}%@");
+            for (var i = 0; i < this.Count; i++)
+            {
+                text.Append($"{this[i]}");
+                if (i < this.Count - 1)
+                {
+                    text.Append("->");
+                }
+            }
+            text.Append($"@{this.EndOffset/(double)ushort.MaxValue*100:F2}%");
+            return text.ToString();
+        }
     }
     
     /// <summary>
@@ -57,23 +75,52 @@ namespace Itinero.MapMatching
             
             // build the edges list.
             var edges = new List<DirectedEdgeId>();
+            var endVertex = edgePath.Vertex;
+            var originalPath = edgePath;
             while (true)
             {
-                if (edgePath.From == null) break;
-
+                if (edgePath.From  == null) break;
+                
                 edges.Insert(0, new DirectedEdgeId(edgePath.Edge));
                 edgePath = edgePath.From;
             }
 
+            // check the start and get the offset.
+            var startVertex = edgePath.Vertex;
             var start = from.Offset;
-            if (edges[0].EdgeId != from.EdgeId) throw new ArgumentException($"Cannot construct a {nameof(MapMatchPath)}: " +
-                                                                            $"First edge does not match edge in from {nameof(RouterPoint)}");
-            if (!edges[0].Forward) start = (ushort) (ushort.MaxValue - start);
-
+            if (startVertex != Itinero.Constants.NO_VERTEX &&
+                from.IsVertex(routerDb, startVertex))
+            {
+                start = 0;
+                if (!edges[0].Forward)
+                {
+                    start = ushort.MaxValue;
+                }
+            }
+            else
+            {
+                if (edges[0].EdgeId != from.EdgeId) throw new ArgumentException($"Cannot construct a {nameof(MapMatchPath)}: " +
+                                                                                $"First edge does not match edge in from {nameof(RouterPoint)}");
+                if (!edges[0].Forward) start = (ushort) (ushort.MaxValue - start);
+            }
+            
+            // check the end and get the offset.
             var end = to.Offset;
-            if (edges[edges.Count - 1].EdgeId != to.EdgeId) throw new ArgumentException($"Cannot construct a {nameof(MapMatchPath)}: " +
-                                                                                        $"Last edge does not match edge in to {nameof(RouterPoint)}");
-            if (!edges[edges.Count - 1].Forward) end = (ushort) (ushort.MaxValue - end);
+            if (endVertex != Itinero.Constants.NO_VERTEX &&
+                to.IsVertex(routerDb, endVertex))
+            { // the end matched the vertex.
+                end = ushort.MaxValue;
+                if (!edges[edges.Count - 1].Forward)
+                {
+                    end = 0;
+                }
+            }
+            else
+            { // the end is a point on an edge.
+                if (edges[edges.Count - 1].EdgeId != to.EdgeId) throw new ArgumentException($"Cannot construct a {nameof(MapMatchPath)}: " +
+                                                                                            $"Last edge does not match edge in to {nameof(RouterPoint)}");
+                if (!edges[edges.Count - 1].Forward) end = (ushort) (ushort.MaxValue - end);
+            }
 
             return new MapMatchPath(edges, start, end);
         }
@@ -89,24 +136,25 @@ namespace Itinero.MapMatching
             if (path.Count == 1)
             {
                 return new EdgePath<float>(Constants.NO_VERTEX, float.MaxValue, 
-                    path[0].SignedDirectedId, new EdgePath<float>(Constants.NO_VERTEX));
+                    path[0].EdgeId, new EdgePath<float>(Constants.NO_VERTEX));
             }
 
-            var edge = path[path.Count - 1];
+            var edge = path[0];
             enumerator.MoveToEdge(edge.SignedDirectedId);
-            var edgePath = new EdgePath<float>(enumerator.To, float.MaxValue, edge.SignedDirectedId, 
+            var edgePath = new EdgePath<float>(edge.Forward ? enumerator.To : enumerator.From, float.MaxValue, edge.SignedDirectedId, 
                 new EdgePath<float>(Constants.NO_VERTEX));
-            for (var i = path.Count - 2; i > 0; i--)
+            for (var i = 1; i < path.Count; i++)
             {
                 edge = path[i];
 
-                if (i == 0)
+                if (i == path.Count - 1)
                 {
                     edgePath = new EdgePath<float>(Constants.NO_VERTEX, float.MaxValue, edge.SignedDirectedId, 
                         edgePath);
                     break;
                 }
-                edgePath = new EdgePath<float>(enumerator.To, float.MaxValue, edge.SignedDirectedId, 
+                enumerator.MoveToEdge(edge.SignedDirectedId);
+                edgePath = new EdgePath<float>(edge.Forward ? enumerator.To : enumerator.From, float.MaxValue, edge.SignedDirectedId, 
                     edgePath);
             }
 
