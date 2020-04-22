@@ -42,15 +42,15 @@ namespace Sample.Bicycle
                 Console.WriteLine(route.ToGeoJson());
             }
 
-            if (args.Length >= 3)
-            {
-                var projectionLines = mapMatcherResult.ChosenProjectionLines();
-                using (var outFile = File.Create(args[3]))
-                using (var writer = new StreamWriter(outFile))
-                {
-                    projectionLines.WriteGeoJson(writer);
-                }
-            }
+//            if (args.Length >= 3)
+//            {
+//                var projectionLines = mapMatcherResult.ChosenProjectionLines();
+//                using (var outFile = File.Create(args[3]))
+//                using (var writer = new StreamWriter(outFile))
+//                {
+//                    projectionLines.WriteGeoJson(writer);
+//                }
+//            }
 
             return 0;
         }
