@@ -1,13 +1,8 @@
 using System;
 using System.IO;
-using Itinero;
-using Itinero.IO.Osm;
-using Itinero.LocalGeo;
-using Itinero.MapMatching.Test.Functional;
 using Newtonsoft.Json;
 using Itinero.MapMatching.Test.Functional.Domain;
 using Serilog;
-using Serilog.Formatting.Json;
 
 namespace Itinero.MapMatching.Test.Functional
 {

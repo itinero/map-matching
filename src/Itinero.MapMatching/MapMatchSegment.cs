@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using Itinero.Algorithms.DataStructures;
+
 namespace Itinero.MapMatching
 {
     /// <summary>
@@ -5,9 +8,9 @@ namespace Itinero.MapMatching
     /// </summary>
     public class MapMatchSegment
     {
-        internal MapMatchSegment(TrackSegment segment, MapMatchPath path)
+        internal MapMatchSegment(TrackSegment segment, IReadOnlyList<Path> paths)
         {
-            Path = path;
+            Paths = paths;
             Segment = segment;
         }
 
@@ -17,8 +20,8 @@ namespace Itinero.MapMatching
         public TrackSegment Segment { get; }
 
         /// <summary>
-        /// Gets the map.
+        /// Gets the path sequence.
         /// </summary>
-        public MapMatchPath Path { get; }
+        public IReadOnlyList<Path> Paths { get; }
     }
 }

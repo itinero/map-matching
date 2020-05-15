@@ -24,10 +24,11 @@
     <Title>Itinero Map Matching</Title>
     <PackageLicenseUrl>https://github.com/itinero/map-matching/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Itinero" Version="1.6.0-pre029" />
+    <ProjectReference Include="..\..\..\..\..\..\itinero\routing2\src\Itinero\Itinero.csproj" />
   </ItemGroup>
   
   

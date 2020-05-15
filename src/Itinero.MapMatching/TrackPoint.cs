@@ -1,12 +1,11 @@
 using System;
-using Itinero.LocalGeo;
 
 namespace Itinero.MapMatching
 {
     /// <summary>
     /// Represents a track point.
     /// </summary>
-    public struct TrackPoint
+    public readonly struct TrackPoint
     {
         /// <summary>
         /// Creates a new track point.
@@ -14,7 +13,7 @@ namespace Itinero.MapMatching
         /// <param name="location">The location.</param>
         /// <param name="timestamp">The timestamp.</param>
         /// <param name="hdop">The horizontal dilution of precision.</param>
-        public TrackPoint(Coordinate location, DateTime? timestamp = null, float? hdop = null)
+        public TrackPoint((double longitude, double latitude) location, DateTime? timestamp = null, double? hdop = null)
         {
             Location = location;
             Timestamp = timestamp;
@@ -24,7 +23,7 @@ namespace Itinero.MapMatching
         /// <summary>
         /// Gets the location.
         /// </summary>
-        public Coordinate Location { get; }
+        public (double longitude, double latitude) Location { get; }
         
         /// <summary>
         /// Gets the timestamp.
@@ -34,6 +33,6 @@ namespace Itinero.MapMatching
         /// <summary>
         /// Gets the horizontal dilution of precision.
         /// </summary>
-        public float? Hdop { get; }
+        public double? Hdop { get; }
     }
 }

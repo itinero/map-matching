@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Itinero.Algorithms;
-using Itinero.Algorithms.PriorityQueues;
+using System.Linq;
 
 namespace Itinero.MapMatching.Model
 {
@@ -17,19 +16,22 @@ namespace Itinero.MapMatching.Model
             // search the shortest path from the start to end.
             var enumerator = model.Enumerator;
             
-            var heap = new BinaryHeap<EdgePath<float>>(1024);
-            heap.Push(new EdgePath<float>(model.Start), 0);
+            var pathTree = new PathTree();
+            var heap = new BinaryHeap<uint>(1024);
+            heap.Push(pathTree.AddVisit(model.Start, uint.MaxValue), 0);
             var settled = new HashSet<uint>();
 
             while (heap.Count > 0)
             {
-                var settle = heap.Pop();
-                if (settled.Contains(settle.Vertex)) continue;
-                settled.Add(settle.Vertex);
+                var settle = heap.Pop(out var settleWeight);
+                var visit = pathTree.GetVisit(settle);
+                if (settled.Contains(visit.vertex)) continue;
+                settled.Add(visit.vertex);
 
-                if (settle.Vertex == model.End)
+                if (visit.vertex == model.End)
                 {
-                    var vertices = settle.ToListAsVertices();
+                    var vertices = pathTree.GetVisits(settle).ToList();
+                    vertices.Reverse();
 
                     var result = new List<(int track, int point, bool arrival, bool departure)>(vertices.Count);
 
@@ -51,22 +53,23 @@ namespace Itinero.MapMatching.Model
                     return result;
                 }
                 
-                if (!enumerator.MoveTo(settle.Vertex)) continue;
+                enumerator.MoveTo(visit.vertex);
 
                 while (enumerator.MoveNext())
                 {
-                    var neighbour = enumerator.Neighbour;
-                    var weight = TrackModel.FromEdgeWeight(enumerator.Data0);
-
-                    var pathToNeighbour = new EdgePath<float>(neighbour, weight + settle.Weight,
-                        settle);
+                    var neighbour = enumerator.To;
+                    if (settled.Contains(neighbour)) continue;
                     
-                    heap.Push(pathToNeighbour, pathToNeighbour.Weight);
+                    var weight = TrackModel.FromEdgeWeight(enumerator.Data);
+
+                    var neighbourVisit = pathTree.AddVisit(neighbour, settle);
+                    
+                    heap.Push(neighbourVisit, weight + settleWeight);
                 }
             }
             
             // model could not be solved, end vertex was not settled.
-            return null;
+            return Array.Empty<(int track, int point, bool arrival, bool departure)>();
         }
     }
 }

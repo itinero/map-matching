@@ -1,4 +1,4 @@
-using Itinero.Attributes;
+using System.Collections.Generic;
 
 namespace Itinero.MapMatching
 {
@@ -12,7 +12,7 @@ namespace Itinero.MapMatching
         /// </summary>
         /// <param name="size">The size.</param>
         /// <param name="attributes">The attributes.</param>
-        public TrackSegment(int size, IAttributeCollection attributes)
+        public TrackSegment(int size, IEnumerable<(string key, string value)> attributes)
         {
             Size = size;
             Attributes = attributes;
@@ -21,7 +21,7 @@ namespace Itinero.MapMatching
         /// <summary>
         /// Gets the attributes.
         /// </summary>
-        public IAttributeCollection Attributes { get; }
+        public IEnumerable<(string key, string value)> Attributes { get; }
         
         /// <summary>
         /// Gets the size.

@@ -1,10 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
-using Itinero.Attributes;
-using Itinero.LocalGeo;
 
 namespace Itinero.MapMatching
 {
@@ -25,9 +22,10 @@ namespace Itinero.MapMatching
         {
             _points = points.ToList();
 
-            if (segments == null) return;
-            var index = 0;
             _segments = new List<(TrackSegment segment, int index)>();
+            if (segments == null) return;
+            
+            var index = 0;
             foreach (var segment in segments)
             {
                 _segments.Add((segment, index));
@@ -40,13 +38,14 @@ namespace Itinero.MapMatching
         /// </summary>
         /// <param name="points">The points.</param>
         /// <param name="segments">The attributes associated with parts of the track.</param>
-        public Track(IEnumerable<(Coordinate, DateTime?, float?)> points, IEnumerable<(int size, IAttributeCollection attributes)> segments = null)
+        public Track(IEnumerable<((double longitude, double latitude), DateTime?, double?)> points, IEnumerable<(int size, IEnumerable<(string key, string value)> attributes)> segments = null)
         {
             _points = (from point in points select new TrackPoint(point.Item1, point.Item2, point.Item3)).ToList();
 
-            if (segments == null) return;
-            var index = 0;
             _segments = new List<(TrackSegment segment, int index)>();
+            if (segments == null) return;
+
+            var index = 0;
             foreach (var (size, attributes) in segments)
             {
                 var segment = new TrackSegment(size, attributes);
