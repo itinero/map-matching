@@ -21,3 +21,9 @@ jobs:
       run: dotnet build --configuration Release --no-restore
     - name: Test
       run: dotnet test --no-restore --verbosity normal
+    - name: Nuget Pack
+      run: dotnet pack -c release
+      working-directory: ./src/Itinero.MapMatching/
+    - name: Nuget push
+      run: dotnet nuget push **/*.nupkg --skip-duplicate -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/itinero/index.json
+      working-directory: ./src/
