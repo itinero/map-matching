@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.IO;
-using GeoAPI.Geometries;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 
@@ -11,7 +10,7 @@ namespace Itinero.MapMatching.Test.Functional
         /// <summary>
         /// Converts the given feature collection to geojson.
         /// </summary>
-        public static string ToGeoJson(this IGeometry geometry)
+        public static string ToGeoJson(this Geometry geometry)
         {
             var features = new FeatureCollection();
             features.Add(new Feature(geometry, new AttributesTable()));
@@ -40,15 +39,15 @@ namespace Itinero.MapMatching.Test.Functional
             var features = new FeatureCollection();
 
             var location = point.Location();
-            features.Features.Add(new Feature(new Point(new Coordinate(location.Longitude, location.Latitude)), 
+            features.Add(new Feature(new Point(new Coordinate(location.Longitude, location.Latitude)), 
                 new AttributesTable()));
 
             var locationOnNetwork = point.LocationOnNetwork(routerDb);
             
-            features.Features.Add(new Feature(new Point(new Coordinate(locationOnNetwork.Longitude, locationOnNetwork.Latitude)), 
+            features.Add(new Feature(new Point(new Coordinate(locationOnNetwork.Longitude, locationOnNetwork.Latitude)), 
                 new AttributesTable()));
             
-            features.Features.Add(new Feature(new LineString(
+            features.Add(new Feature(new LineString(
                 new Coordinate[] { 
                     new Coordinate(locationOnNetwork.Longitude, locationOnNetwork.Latitude),
                     new Coordinate(location.Longitude, location.Latitude)
@@ -70,9 +69,9 @@ namespace Itinero.MapMatching.Test.Functional
             foreach (var point in points)
             {
                 var pointFeatures = point.ToFeatures(routerDb);
-                foreach (var feature in pointFeatures.Features)
+                foreach (var feature in pointFeatures)
                 {
-                    features.Features.Add(feature);
+                    features.Add(feature);
                 }
             }
 

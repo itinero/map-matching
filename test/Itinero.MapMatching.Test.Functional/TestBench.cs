@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using GeoAPI.Geometries;
 using Itinero.Geo;
 using Itinero.IO.Osm;
 using Itinero.MapMatching.Test.Functional.Domain;
@@ -112,7 +111,7 @@ namespace Itinero.MapMatching.Test.Functional
             }
         }
 
-        private static FeatureCollection BuildErrorOutput(Router router, Route route, IEnumerable<RouterPoint> points, IGeometry buffer,
+        private static FeatureCollection BuildErrorOutput(Router router, Route route, IEnumerable<RouterPoint> points, Geometry buffer,
             Track track)
         {
             var features = new FeatureCollection();
@@ -174,7 +173,7 @@ namespace Itinero.MapMatching.Test.Functional
             var track = new List<(Itinero.LocalGeo.Coordinate, DateTime?, float?)>();
             var jsonSerializer = NetTopologySuite.IO.GeoJsonSerializer.Create();
             var featureCollection = jsonSerializer.Deserialize<FeatureCollection>(new JsonTextReader(reader));
-            foreach (var feature in featureCollection.Features)
+            foreach (var feature in featureCollection)
             {
                 if (feature.Geometry is LineString lineString)
                 {
