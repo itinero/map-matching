@@ -138,43 +138,44 @@ namespace Itinero.MapMatching
             }
 
             // calculate the most efficient 'route' through the model.
-            var bestMatchResult = trackModel.BestPath();
-            var bestMatch = bestMatchResult.path;
-            if (bestMatch == null) return new Result<MapMatcherResult>("Could not match the track.");
-            
-            // build the paths.
-            var weightHandler = _router.GetDefaultWeightHandler(_profile);
-            var settings = new RoutingSettings<float>()
-            {
-                DirectionAbsolute = true,
-            };
-
-            var rawPaths = new List<Result<EdgePath<float>>>();
+            var bestMatchResults = trackModel.BestPaths();
             var chosenPoints = new List<RouterPoint>();
-            for (var l = 1; l < bestMatch.Count; l++)
+            var rawPaths = new List<Result<EdgePath<float>>>();
+            foreach (var bestMatch in bestMatchResults)
             {
-                var source = bestMatch[l - 1];
-                var sourceRp = locations[source.track].points[source.point].rp;
-                var target = bestMatch[l - 0];
-                var targetRp = locations[target.track].points[target.point].rp;
-                
-                var maxSearchDistance = Coordinate.DistanceEstimateInMeter(
-                                            sourceRp.Location(),
-                                            targetRp.Location()) * _settings.RouteDistanceFactor;
-                settings.SetMaxSearch(_profile.FullName, maxSearchDistance);
-                if (chosenPoints.Count == 0)
+                // build the paths.
+                var weightHandler = _router.GetDefaultWeightHandler(_profile);
+                var settings = new RoutingSettings<float>()
                 {
-                    chosenPoints.Add(sourceRp);
+                    DirectionAbsolute = true,
+                };
+
+                for (var l = 1; l < bestMatch.Count; l++)
+                {
+                    var source = bestMatch[l - 1];
+                    var sourceRp = locations[source.track].points[source.point].rp;
+                    var target = bestMatch[l - 0];
+                    var targetRp = locations[target.track].points[target.point].rp;
+
+                    var maxSearchDistance = Coordinate.DistanceEstimateInMeter(
+                        sourceRp.Location(),
+                        targetRp.Location()) * _settings.RouteDistanceFactor;
+                    settings.SetMaxSearch(_profile.FullName, maxSearchDistance);
+                    if (chosenPoints.Count == 0)
+                    {
+                        chosenPoints.Add(sourceRp);
+                    }
+
+                    chosenPoints.Add(targetRp);
+
+                    var rawPath = _router.TryCalculateRaw(_profile, weightHandler, sourceRp, source.departure,
+                        targetRp, target.arrival, settings);
+                    // if (rawPath.IsError)
+                    // {
+                    //     throw new Exception("Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before.");
+                    // }
+                    rawPaths.Add(rawPath);
                 }
-                chosenPoints.Add(targetRp);
-                
-                var rawPath = _router.TryCalculateRaw(_profile, weightHandler, sourceRp, source.departure,
-                    targetRp, target.arrival, settings);
-                // if (rawPath.IsError)
-                // {
-                //     throw new Exception("Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before.");
-                // }
-                rawPaths.Add(rawPath);
             }
 
             return new Result<MapMatcherResult>(

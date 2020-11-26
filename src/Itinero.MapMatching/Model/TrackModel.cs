@@ -128,6 +128,37 @@ namespace Itinero.MapMatching.Model
         }
 
         /// <summary>
+        /// Closes the model but starts from the given track point.
+        /// </summary>
+        /// <param name="startAtTrackPoint"></param>
+        public void Close(int startAtTrackPoint)
+        {
+            _graph.RemoveEdges(this.Start);
+            _graph.RemoveEdges(this.End);
+            
+            var l = 2;
+            while (_vertices[l].track != startAtTrackPoint)
+            {
+                l++;
+            }
+            while (_vertices[l].track == startAtTrackPoint)
+            {
+                _graph.AddEdge(0, ToVertex(l, true, true), 0);
+                _graph.AddEdge(0, ToVertex(l, true, false), 0);
+                l++;
+            }
+            
+            l = _vertices.Count - 1;
+            var track = _vertices[l].track;
+            while (_vertices[l].track == track)
+            {
+                _graph.AddEdge(ToVertex(l, false, true), 1,0);
+                _graph.AddEdge(ToVertex(l, false, false), 1,0);
+                l--;
+            }
+        }
+
+        /// <summary>
         /// Adds a new transit, a move from one location to another. 
         /// </summary>
         /// <param name="location1"></param>
