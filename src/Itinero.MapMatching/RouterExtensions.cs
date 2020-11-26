@@ -31,12 +31,12 @@ namespace Itinero.MapMatching
             if (result.RouterPoints.Length <= 1) return null;
 
             var route = router.BuildRoute(result.Profile, router.GetDefaultWeightHandler(result.Profile),
-                result.RouterPoints[0], result.RouterPoints[1], result.RawPaths[0]).Value;
+                result.RouterPoints[0], result.RouterPoints[1], result.RawPaths[0].Value).Value;
             for (var i = 2; i < result.RouterPoints.Length; i++)
             {
                 var nextRoute = router.BuildRoute(result.Profile, router.GetDefaultWeightHandler(result.Profile),
                     result.RouterPoints[i - 1], result.RouterPoints[i],
-                    result.RawPaths[i - 1]).Value;
+                    result.RawPaths[i - 1].Value).Value;
                 route = route.Concatenate(nextRoute);
             }
 

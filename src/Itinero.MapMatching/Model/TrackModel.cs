@@ -81,10 +81,10 @@ namespace Itinero.MapMatching.Model
         /// <param name="location">The location identified by a track index and a resolved point.</param>
         /// <param name="prob">The cost associated with this location.</param>
         /// <returns>The location id.</returns>
-        public int AddLocation((int track, int point) location, float prob)
+        public int AddLocation((int trackIndex, int pointIndex) location, float prob)
         {
             var id = _vertices.Count;
-            _vertices.Add((location.track, location.point, prob));
+            _vertices.Add((location.trackIndex, location.pointIndex, prob));
             
             // add one that represent forward, one that represents backward and one that links the resolve probabilities.
             var af = ToVertex(id, true, true);

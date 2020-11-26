@@ -41,13 +41,13 @@ namespace Itinero.MapMatching
             var locations = new List<(List<(RouterPoint rp, int modelId)> points, int trackIdx)>(track.Count);
             var isAcceptable = _router.GetIsAcceptable(_profile);
             var maxDistance = _settings.SnappingMaxDistance;
-            for (var trackIdx = 0; trackIdx < track.Count; trackIdx++)
+            for (var trackIndex = 0; trackIndex < track.Count; trackIndex++)
             {
                 // resolve to multiple possible locations.
                 var resolve = new ResolveMultipleAlgorithm(
                     _router.Db.Network.GeometricGraph,
-                    track[trackIdx].Location.Latitude, track[trackIdx].Location.Longitude,
-                    Offset(track[trackIdx].Location, _router.Db.Network), maxDistance,
+                    track[trackIndex].Location.Latitude, track[trackIndex].Location.Longitude,
+                    Offset(track[trackIndex].Location, _router.Db.Network), maxDistance,
                     isAcceptable, /* allow non-orthogonal projections */ true);
                 resolve.Run();
 
@@ -57,16 +57,16 @@ namespace Itinero.MapMatching
                 
                 var pointAndModel = new List<(RouterPoint rp, int modelId)>(points.Count);
                 // add each one as a vertex.
-                for (var p = 0; p < points.Count; p++)
+                for (var resolvedIndex = 0; resolvedIndex < points.Count; resolvedIndex++)
                 {
-                    var prob = ResolveProbability(points[p]);
+                    var prob = ResolveProbability(points[resolvedIndex]);
 
-                    var modelId = trackModel.AddLocation((trackIdx, p), prob);
+                    var modelId = trackModel.AddLocation((trackIndex, resolvedIndex), prob);
                         
-                    pointAndModel.Add((points[p], modelId));
+                    pointAndModel.Add((points[resolvedIndex], modelId));
                 }
                     
-                locations.Add((pointAndModel, trackIdx));
+                locations.Add((pointAndModel, trackIndex));
             }
             
             // close the model, as in 'no more vertices'.
@@ -138,7 +138,8 @@ namespace Itinero.MapMatching
             }
 
             // calculate the most efficient 'route' through the model.
-            var bestMatch = trackModel.BestPath();
+            var bestMatchResult = trackModel.BestPath();
+            var bestMatch = bestMatchResult.path;
             if (bestMatch == null) return new Result<MapMatcherResult>("Could not match the track.");
             
             // build the paths.
@@ -148,7 +149,7 @@ namespace Itinero.MapMatching
                 DirectionAbsolute = true,
             };
 
-            var rawPaths = new List<EdgePath<float>>();
+            var rawPaths = new List<Result<EdgePath<float>>>();
             var chosenPoints = new List<RouterPoint>();
             for (var l = 1; l < bestMatch.Count; l++)
             {
@@ -169,11 +170,11 @@ namespace Itinero.MapMatching
                 
                 var rawPath = _router.TryCalculateRaw(_profile, weightHandler, sourceRp, source.departure,
                     targetRp, target.arrival, settings);
-                if (rawPath.IsError)
-                {
-                    throw new Exception("Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before.");
-                }
-                rawPaths.Add(rawPath.Value);
+                // if (rawPath.IsError)
+                // {
+                //     throw new Exception("Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before.");
+                // }
+                rawPaths.Add(rawPath);
             }
 
             return new Result<MapMatcherResult>(

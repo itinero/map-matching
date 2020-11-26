@@ -14,7 +14,7 @@ namespace Itinero.MapMatching
         private readonly RouterDb _routerDb;
         
         internal MapMatcherResult(RouterDb routerDb, Track source, Profile profile, RouterPoint[] routerPoints, 
-            IReadOnlyList<EdgePath<float>> rawPaths)
+            IReadOnlyList<Result<EdgePath<float>>> rawPaths)
         {
             _routerDb = routerDb;
             
@@ -38,7 +38,7 @@ namespace Itinero.MapMatching
         /// <summary>
         /// Gets the raw paths.
         /// </summary>
-        public IReadOnlyList<EdgePath<float>> RawPaths { get; }
+        public IReadOnlyList<Result<EdgePath<float>>> RawPaths { get; }
         
         /// <summary>
         /// The chosen projection points.
