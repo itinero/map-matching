@@ -56,12 +56,14 @@ namespace Itinero.MapMatching
                 if (points.Count <= 0) continue; // no points found!
                 
                 var pointAndModel = new List<(RouterPoint rp, int modelId)>(points.Count);
+                
                 // add each one as a vertex.
+                var locationIdx = locations.Count;
                 for (var resolvedIndex = 0; resolvedIndex < points.Count; resolvedIndex++)
                 {
                     var prob = ResolveProbability(points[resolvedIndex]);
 
-                    var modelId = trackModel.AddLocation((trackIndex, resolvedIndex), prob);
+                    var modelId = trackModel.AddLocation((locationIdx, resolvedIndex), prob);
                         
                     pointAndModel.Add((points[resolvedIndex], modelId));
                 }
@@ -73,10 +75,10 @@ namespace Itinero.MapMatching
             trackModel.Close();
             
             // build transit probabilities.
-            for (var trackIdx = 1; trackIdx < locations.Count; trackIdx++)
+            for (var locationIdx = 1; locationIdx < locations.Count; locationIdx++)
             {
-                var sourceL = locations[trackIdx - 1];
-                var targetL = locations[trackIdx - 0];
+                var sourceL = locations[locationIdx - 1];
+                var targetL = locations[locationIdx - 0];
 
                 var distance = Coordinate.DistanceEstimateInMeter(
                     track[sourceL.trackIdx].Location,
@@ -84,8 +86,8 @@ namespace Itinero.MapMatching
                 var maxSearchDistance = distance * _settings.RouteDistanceFactor;
                 if (maxSearchDistance < _settings.MinRouteDistance) maxSearchDistance = _settings.MinRouteDistance;
 
-                var sources = locations[trackIdx - 1].points.Select(x => x.rp).ToList();
-                var targets = locations[trackIdx - 0].points.Select(x => x.rp).ToList();
+                var sources = locations[locationIdx - 1].points.Select(x => x.rp).ToList();
+                var targets = locations[locationIdx - 0].points.Select(x => x.rp).ToList();
 
                 var weights = _router.CalculateManyToManyDirected(_profile, sources,
                     targets, maxSearchDistance);
@@ -94,8 +96,8 @@ namespace Itinero.MapMatching
                 for (var s = 0; s < sources.Count; s++)
                 for (var t = 0; t < targets.Count; t++)
                 {
-                    var sourceModelId = locations[trackIdx - 1].points[s].modelId;
-                    var targetModelId = locations[trackIdx - 0].points[t].modelId;
+                    var sourceModelId = locations[locationIdx - 1].points[s].modelId;
+                    var targetModelId = locations[locationIdx - 0].points[t].modelId;
 
                     var w = weights[s * 2 + 0][t * 2 + 0];
                     if (w < float.MaxValue)
@@ -130,11 +132,11 @@ namespace Itinero.MapMatching
                     }
                 }
 
-                if (!hasRoute)
-                {
-                    return new Result<MapMatcherResult>(
-                        $"Could not find a path between {sourceL.trackIdx} and {targetL.trackIdx}");
-                }
+                // if (!hasRoute)
+                // {
+                //     return new Result<MapMatcherResult>(
+                //         $"Could not find a path between {sourceL.trackIdx} and {targetL.trackIdx}");
+                // }
             }
 
             // calculate the most efficient 'route' through the model.

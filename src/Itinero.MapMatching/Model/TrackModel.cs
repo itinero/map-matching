@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Itinero.Graphs;
 using Itinero.Graphs.Directed;
@@ -141,11 +142,13 @@ namespace Itinero.MapMatching.Model
             {
                 l++;
             }
+            if (l < 0 || l >= _vertices.Count) throw new Exception($"Track point with id: {startAtTrackPoint} not found!");
             while (_vertices[l].track == startAtTrackPoint)
             {
                 _graph.AddEdge(0, ToVertex(l, true, true), 0);
                 _graph.AddEdge(0, ToVertex(l, true, false), 0);
                 l++;
+                if (l == _vertices.Count) break;
             }
             
             l = _vertices.Count - 1;
