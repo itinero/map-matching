@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+/*using System.Collections.Generic;
 
 namespace Itinero.MapMatching.Model
 {
@@ -157,4 +157,4 @@ namespace Itinero.MapMatching.Model
             return (track, point, offset == 0 || offset == 2);
         }
     }
-}
+}*/

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <AssemblyName>Itinero.MapMatching</AssemblyName>
     <PackageId>Itinero.MapMatching</PackageId>
@@ -28,8 +28,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\..\itinero\routing2\src\Itinero\Itinero.csproj" />
+    <PackageReference Include="Itinero" Version="2.0.0-alpha-059" />
   </ItemGroup>
-  
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\routing\routing2\src\Itinero\Itinero.csproj" />
+  </ItemGroup>
   
 </Project>
