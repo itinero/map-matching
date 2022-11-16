@@ -1,247 +1,80 @@
 ﻿using System;
 using System.Collections.Generic;
-using Itinero.Algorithms.Search;
-using Itinero.LocalGeo;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Itinero.Algorithms;
+using System.Threading;
+using System.Threading.Tasks;
+using Itinero.Geo;
+using Itinero.MapMatching.IO.GeoJson;
 using Itinero.MapMatching.Model;
-using Itinero.MapMatching.Routing;
+using Itinero.MapMatching.Solver;
+using Itinero.Network;
 using Itinero.Profiles;
+using Itinero.Routes.Paths;
+using Itinero.Routing;
+using Itinero.Snapping;
 
 [assembly: InternalsVisibleTo("Itinero.MapMatching.Test")]
 [assembly: InternalsVisibleTo("Itinero.MapMatching.Test.Functional")]
-namespace Itinero.MapMatching
+
+namespace Itinero.MapMatching;
+
+public class MapMatcher
 {
-    internal class MapMatcher
+    private readonly RoutingNetwork _routingNetwork;
+    private readonly Profile _profile;
+    private readonly MapMatcherSettings _settings;
+    private readonly ModelBuilder _modelBuilder;
+    private readonly ModelSolver _modelSolver;
+
+    public MapMatcher(RoutingNetwork routingNetwork, MapMatcherSettings settings)
     {
-        private readonly Router _router;
-        private readonly Profile _profile;
-        private readonly MapMatcherSettings _settings;
+        _settings = settings;
+        _routingNetwork = routingNetwork;
+        if (_settings.Profile == null) throw new Exception("No profile set");
+        _profile = settings.Profile;
 
-        public MapMatcher(Router router, MapMatcherSettings settings = null)
+        _modelBuilder = new ModelBuilder(routingNetwork);
+        _modelSolver = new ModelSolver();
+    }
+
+    public MapMatcherSettings Settings => _settings;
+
+    /// <summary>
+    /// Gets the routing network.
+    /// </summary>
+    public RoutingNetwork RoutingNetwork => _routingNetwork;
+
+    public async Task<Result<MapMatch>> MatchAsync(Track track)
+    {
+        // build track model.
+        var trackModel = await _modelBuilder.BuildModel(track, _profile);
+        var trackModelGeoJson = trackModel.ToGeoJson(this.RoutingNetwork);
+
+        // run solver.
+        var bestMatch = _modelSolver.Solve(trackModel).ToList();
+
+        // calculate the paths between each matched point pair.
+        var rawPaths = new List<Path>();
+        var router = _routingNetwork.Route(_profile);
+        for (var l = 2; l < bestMatch.Count - 1; l++)
         {
-            if (settings == null) settings = MapMatcherSettings.Default;
-            _settings = settings;
-            
-            var profile = router.Db.GetSupportedProfile(settings.Profile);
-            if (profile.Metric != ProfileMetric.DistanceInMeters) { throw new ArgumentException(
-                $"Only profiles supported with distance as metric.", $"{nameof(profile)}"); }
-            
-            _router = router;
-            _profile = profile;
+            var source = trackModel.GetNode(bestMatch[l - 1]).SnapPoint;
+            var target = trackModel.GetNode(bestMatch[l]).SnapPoint;
+
+            if (source == null) throw new Exception("Track point should have a snap point");
+            if (target == null) throw new Exception("Track point should have a snap point");
+
+            var path = await router.From(source.Value).To(target.Value).Path(CancellationToken.None);
+            if (path.IsError)
+                throw new Exception(
+                    "Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before.");
+            rawPaths.Add(path);
+            if (rawPaths.Count == 218) Debug.WriteLine("break");
         }
 
-        public Result<MapMatcherResult> TryMatch(Track track)
-        {
-            // build track model.
-            var trackModel = new TrackModel();
-            
-            // build location (vertices) of the model.
-            var locations = new List<(List<(RouterPoint rp, int modelId)> points, int trackIdx)>(track.Count);
-            var isAcceptable = _router.GetIsAcceptable(_profile);
-            var maxDistance = _settings.SnappingMaxDistance;
-            for (var trackIndex = 0; trackIndex < track.Count; trackIndex++)
-            {
-                // resolve to multiple possible locations.
-                var resolve = new ResolveMultipleAlgorithm(
-                    _router.Db.Network.GeometricGraph,
-                    track[trackIndex].Location.Latitude, track[trackIndex].Location.Longitude,
-                    Offset(track[trackIndex].Location, _router.Db.Network), maxDistance,
-                    isAcceptable, /* allow non-orthogonal projections */ true);
-                resolve.Run();
-
-                var points = resolve.HasSucceeded ? resolve.Results : new List<RouterPoint>();
-
-                if (points.Count <= 0) continue; // no points found!
-                
-                var pointAndModel = new List<(RouterPoint rp, int modelId)>(points.Count);
-                
-                // add each one as a vertex.
-                var locationIdx = locations.Count;
-                for (var resolvedIndex = 0; resolvedIndex < points.Count; resolvedIndex++)
-                {
-                    var prob = ResolveProbability(points[resolvedIndex]);
-
-                    var modelId = trackModel.AddLocation((locationIdx, resolvedIndex), prob);
-                        
-                    pointAndModel.Add((points[resolvedIndex], modelId));
-                }
-                    
-                locations.Add((pointAndModel, trackIndex));
-            }
-            
-            // close the model, as in 'no more vertices'.
-            trackModel.Close();
-            
-            // build transit probabilities.
-            for (var locationIdx = 1; locationIdx < locations.Count; locationIdx++)
-            {
-                var sourceL = locations[locationIdx - 1];
-                var targetL = locations[locationIdx - 0];
-
-                var distance = Coordinate.DistanceEstimateInMeter(
-                    track[sourceL.trackIdx].Location,
-                    track[targetL.trackIdx].Location);
-                var maxSearchDistance = distance * _settings.RouteDistanceFactor;
-                if (maxSearchDistance < _settings.MinRouteDistance) maxSearchDistance = _settings.MinRouteDistance;
-
-                var sources = locations[locationIdx - 1].points.Select(x => x.rp).ToList();
-                var targets = locations[locationIdx - 0].points.Select(x => x.rp).ToList();
-
-                var weights = _router.CalculateManyToManyDirected(_profile, sources,
-                    targets, maxSearchDistance);
-
-                var hasRoute = false;
-                for (var s = 0; s < sources.Count; s++)
-                for (var t = 0; t < targets.Count; t++)
-                {
-                    var sourceModelId = locations[locationIdx - 1].points[s].modelId;
-                    var targetModelId = locations[locationIdx - 0].points[t].modelId;
-
-                    var w = weights[s * 2 + 0][t * 2 + 0];
-                    if (w < float.MaxValue)
-                    {
-                        hasRoute = true;
-                        w = RouteProbability(w, distance, maxSearchDistance);
-                        trackModel.AddTransit(sourceModelId, targetModelId, true, true, w);
-                    }
-
-                    w = weights[s * 2 + 0][t * 2 + 1];
-                    if (w < float.MaxValue)
-                    {
-                        hasRoute = true;
-                        w = RouteProbability(w, distance, maxSearchDistance);
-                        trackModel.AddTransit(sourceModelId, targetModelId, true, false, w);
-                    }
-
-                    w = weights[s * 2 + 1][t * 2 + 0];
-                    if (w < float.MaxValue)
-                    {
-                        hasRoute = true;
-                        w = RouteProbability(w, distance, maxSearchDistance);
-                        trackModel.AddTransit(sourceModelId, targetModelId, false, true, w);
-                    }
-
-                    w = weights[s * 2 + 1][t * 2 + 1];
-                    if (w < float.MaxValue)
-                    {
-                        hasRoute = true;
-                        w = RouteProbability(w, distance, maxSearchDistance);
-                        trackModel.AddTransit(sourceModelId, targetModelId, false, false, w);
-                    }
-                }
-
-                // if (!hasRoute)
-                // {
-                //     return new Result<MapMatcherResult>(
-                //         $"Could not find a path between {sourceL.trackIdx} and {targetL.trackIdx}");
-                // }
-            }
-
-            // calculate the most efficient 'route' through the model.
-            var bestMatchResults = trackModel.BestPaths();
-            var chosenPoints = new List<RouterPoint>();
-            var rawPaths = new List<Result<EdgePath<float>>>();
-            foreach (var bestMatch in bestMatchResults)
-            {
-                // build the paths.
-                var weightHandler = _router.GetDefaultWeightHandler(_profile);
-                var settings = new RoutingSettings<float>()
-                {
-                    DirectionAbsolute = true,
-                };
-
-                for (var l = 1; l < bestMatch.Count; l++)
-                {
-                    var source = bestMatch[l - 1];
-                    var sourceRp = locations[source.track].points[source.point].rp;
-                    var target = bestMatch[l - 0];
-                    var targetRp = locations[target.track].points[target.point].rp;
-
-                    var maxSearchDistance = Coordinate.DistanceEstimateInMeter(
-                        sourceRp.Location(),
-                        targetRp.Location()) * _settings.RouteDistanceFactor;
-                    settings.SetMaxSearch(_profile.FullName, maxSearchDistance);
-                    if (chosenPoints.Count == 0)
-                    {
-                        chosenPoints.Add(sourceRp);
-                    }
-
-                    chosenPoints.Add(targetRp);
-
-                    var rawPath = _router.TryCalculateRaw(_profile, weightHandler, sourceRp, source.departure,
-                        targetRp, target.arrival, settings);
-                    // if (rawPath.IsError)
-                    // {
-                    //     throw new Exception("Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before.");
-                    // }
-                    rawPaths.Add(rawPath);
-                }
-            }
-
-            return new Result<MapMatcherResult>(
-                new MapMatcherResult(_router.Db, track, _profile, chosenPoints.ToArray(), rawPaths));
-        }
-        
-        private double GPSMeasurementProbability(float distance)
-        {
-            // TODO this is estimated in the paper, do we do the same here based on the data.
-            // now we just use the max snapping distance.
-            double measurementStandardDeviation = (_settings.SnappingMaxDistance / 5);
-
-            var factor = 1; // (Math.Sqrt(2 * Math.PI) * measurementStandardDeviation);
-
-            var exp = Math.Exp(-0.5 * System.Math.Pow(distance / measurementStandardDeviation, 2));
-            
-            return factor * exp;
-        }
-
-        private float ResolveProbability(RouterPoint resolvedPoint)
-        {
-            var origLoc = resolvedPoint.Location();
-            var resolvedLoc = resolvedPoint.LocationOnNetwork(_router.Db);
-            
-            var greatCircle = System.Math.Abs(Coordinate.DistanceEstimateInMeter(origLoc, resolvedLoc));
-
-            var prob = (float)GPSMeasurementProbability(greatCircle);
-            //Console.WriteLine($"{greatCircle}: {prob} ({1-prob})");
-            return 1 - prob;
-        }
-
-        private double TransitionProbability(float routeDistance, float locationDistance)
-        {
-            // TODO this is estimated in the paper, do we do the same here based on the data.
-            // now we just use the max snapping distance.
-            var beta = _settings.SnappingMaxDistance; 
-
-            var factor = 1;// / beta;
-
-            var exp = Math.Exp(-System.Math.Abs(routeDistance - locationDistance) / beta);
-
-            return factor * exp;
-        }
-
-        private float RouteProbability(float routeDistance, float locationDistance, float maxDistance)
-        {
-            // TODO: improve, for now too simple.
-            if (System.Math.Abs(routeDistance) > locationDistance * _settings.RouteDistanceFactor)
-            {
-                return 1;
-            }
-            var prob = (float)TransitionProbability(routeDistance, locationDistance);
-            //Console.WriteLine($"{routeDistance},{locationDistance} -> {System.Math.Abs(routeDistance - locationDistance)}: {prob} ({1-prob})");
-            return 1-prob;
-//            return (((System.Math.Abs(routeDistance - locationDistance) / maxDistance)));
-        }
-
-        static float Offset(Coordinate centerLocation, Itinero.Data.Network.RoutingNetwork routingNetwork)
-        {
-            var offsetLocation = centerLocation.OffsetWithDistances(routingNetwork.MaxEdgeDistance / 2);
-            var latitudeOffset = System.Math.Abs(centerLocation.Latitude - offsetLocation.Latitude);
-            var longitudeOffset = System.Math.Abs(centerLocation.Longitude - offsetLocation.Longitude);
-
-            return System.Math.Max(latitudeOffset, longitudeOffset);
-        }
+        return new Result<MapMatch>(
+            new MapMatch(track, _profile, rawPaths));
     }
 }

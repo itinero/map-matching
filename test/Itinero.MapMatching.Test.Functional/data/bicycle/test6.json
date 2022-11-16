@@ -2,7 +2,7 @@
     "description": "A track with meta data attached.",
     "profile": {
         "name": "bicycle.shortest",
-        "file": "data/bicycle.lua"
+      "file": "data/bicycle.fast.lua"
     },
     "trackfile": "data/bicycle/test6-track.geojson",
     "osmdatafile": "data/bicycle/test6-network.osm.pbf",

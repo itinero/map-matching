@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <AssemblyName>Itinero.MapMatching</AssemblyName>
     <PackageId>Itinero.MapMatching</PackageId>
@@ -20,15 +20,15 @@
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
-    <PackageVersion>0.0.1-pre005</PackageVersion>
+    <PackageVersion>0.0.2-pre001</PackageVersion>
     <Title>Itinero Map Matching</Title>
     <PackageLicenseUrl>https://github.com/itinero/map-matching/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Itinero" Version="1.6.0-pre031" />
+    <PackageReference Include="Itinero" Version="2.0.0-alpha-060" />
   </ItemGroup>
 
-  
 </Project>

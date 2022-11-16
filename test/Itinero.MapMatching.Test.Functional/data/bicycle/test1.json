@@ -2,7 +2,7 @@
     "description": "A simple, almost perfect, track.",
     "profile": {
         "name": "bicycle.shortest",
-        "file": "data/bicycle.lua"
+        "file": "data/bicycle.fast.lua"
     },
     "trackfile": "data/bicycle/test1-track.geojson",
     "osmdatafile": "data/bicycle/test1-network.osm.pbf",

@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-using Itinero.Graphs;
-using Itinero.Graphs.Directed;
+/*using System.Collections.Generic;
 
 namespace Itinero.MapMatching.Model
 {
@@ -13,8 +10,8 @@ namespace Itinero.MapMatching.Model
     /// </remarks>
     internal class TrackModel
     {
-        private readonly List<(int track, int point, float prob)> _vertices = new List<(int track, int point, float prob)>(); 
-        private readonly DirectedGraph _graph = new DirectedGraph(1);
+        private readonly List<(int track, int point, double prob)> _vertices = new List<(int track, int point, double prob)>(); 
+        private readonly DirectedGraph _graph = new DirectedGraph();
         private readonly float _uTurnCost;
         
         // HOW IS THIS NETWORK FORMED:
@@ -47,14 +44,14 @@ namespace Itinero.MapMatching.Model
             _vertices.Add((-1, -1, 1));
         }
 
-        private static uint ToEdgeWeight(float cost)
+        private static uint ToEdgeWeight(double cost)
         {
             return (uint) (cost * 1000000);
         }
 
-        internal static float FromEdgeWeight(uint weight)
+        internal static double FromEdgeWeight(uint weight)
         {
-            return (weight / 1000000f);
+            return (weight / 1000000.0);
         }
 
         private static uint ToVertex(int id, bool arrival, bool forward)
@@ -82,7 +79,7 @@ namespace Itinero.MapMatching.Model
         /// <param name="location">The location identified by a track index and a resolved point.</param>
         /// <param name="prob">The cost associated with this location.</param>
         /// <returns>The location id.</returns>
-        public int AddLocation((int trackIndex, int pointIndex) location, float prob)
+        public int AddLocation((int track, int point) location, double prob)
         {
             var id = _vertices.Count;
             _vertices.Add((location.trackIndex, location.pointIndex, prob));
@@ -170,7 +167,7 @@ namespace Itinero.MapMatching.Model
         /// <param name="forward2"></param>
         /// <param name="cost">The cost of the transit.</param>
         public void AddTransit(int location1, int location2,
-            bool forward1, bool forward2, float cost)
+            bool forward1, bool forward2, double cost)
         {
             var v1 = ToVertex(location1, false, forward1);
             var v2 = ToVertex(location2, true, forward2);
@@ -182,7 +179,7 @@ namespace Itinero.MapMatching.Model
 
         internal uint End => 1;
 
-        internal DirectedGraph.EdgeEnumerator Enumerator => _graph.GetEdgeEnumerator();
+        internal DirectedGraph.Enumerator Enumerator => _graph.GetEnumerator();
 
         internal (int track, int point, bool forward) GetVertexDetails(uint vertex)
         {
@@ -193,4 +190,4 @@ namespace Itinero.MapMatching.Model
             return (track, point, offset == 0 || offset == 2);
         }
     }
-}
+}*/

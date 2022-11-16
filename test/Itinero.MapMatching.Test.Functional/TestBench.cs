@@ -1,105 +1,110 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Itinero.Geo;
+using Itinero.IO.Json.GeoJson;
 using Itinero.IO.Osm;
+using Itinero.MapMatching.IO.GeoJson;
 using Itinero.MapMatching.Test.Functional.Domain;
 using Itinero.Profiles;
+using Itinero.Profiles.Lua;
+using Itinero.Routes;
+using Neo.IronLua;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Operation.Buffer;
 using Newtonsoft.Json;
 using OsmSharp.Streams;
-using Vehicle = Itinero.Osm.Vehicles.Vehicle;
 
-namespace Itinero.MapMatching.Test.Functional
+namespace Itinero.MapMatching.Test.Functional;
+
+internal static class TestBench
 {
-    internal static class TestBench
+    private static readonly Dictionary<string, Profile> Profiles = new();
+
+    private static Profile LoadProfile(string vehicleFile)
     {
-        private static Dictionary<string, DynamicVehicle> Vehicles = new Dictionary<string, DynamicVehicle>();
-        
-        private static DynamicVehicle LoadVehicle(string vehicleFile)
+        if (Profiles.TryGetValue(vehicleFile, out var vehicle)) return vehicle;
+
+        var name = new FileInfo(vehicleFile).Name;
+        name = name[..name.LastIndexOf(".", StringComparison.Ordinal)];
+        vehicle = LuaProfile.Load(File.ReadAllText(vehicleFile), name);
+        Profiles[vehicleFile] = vehicle;
+        return vehicle;
+    }
+
+    public static async Task<(bool success, string message)> RunAsync(this TestData test)
+    {
+        try
         {
-            if (Vehicles.TryGetValue(vehicleFile, out var vehicle)) return vehicle;
-            
-            using (var vehicleFileStream = File.OpenRead(vehicleFile))
+            // load profile.
+            var profile = LoadProfile(test.Profile.File);
+
+            // load data using profile.
+            var routerDb = new RouterDb();
+            await using (var stream = File.OpenRead(test.OsmDataFile))
             {
-                vehicle = DynamicVehicle.LoadFromStream(vehicleFileStream);
-            }
-
-            Vehicles[vehicleFile] = vehicle;
-            return vehicle;
-        }
-        
-        public static (bool success, string message) Run(this TestData test)
-        {
-            try
-            {
-                // load vehicle.
-                var vehicle = LoadVehicle(test.Profile.File);
-
-                // load data using vehicle.
-                var routerDb = new RouterDb();
-                using (var stream = File.OpenRead(test.OsmDataFile))
+                if (test.OsmDataFile.EndsWith("osm.pbf"))
                 {
-                    if (test.OsmDataFile.EndsWith("osm.pbf"))
-                    {
-                        routerDb.LoadOsmData(stream, vehicle);
-                    }
-                    else
-                    {
-                        var osmStream = new XmlOsmStreamSource(stream);
-                        routerDb.LoadOsmData(osmStream, vehicle);
-                    }
-                }
-
-#if DEBUG
-                File.WriteAllText(test.OsmDataFile + ".geojson", routerDb.GetGeoJson());
-#endif
-                
-                // test route.
-                Track track;
-                if (test.TrackFile.EndsWith(".tsv"))
-                {
-                    using (var stream = File.OpenRead(test.TrackFile))
-                    {
-                        track = FromTsv(new StreamReader(stream));
-                    }
+                    routerDb.UseOsmData(new PBFOsmStreamSource(stream));
                 }
                 else
                 {
-                    using (var stream = File.OpenRead(test.TrackFile))
-                    {
-                        track = FromGeoJson(new StreamReader(stream));
-                    }
+                    var osmStream = new XmlOsmStreamSource(stream);
+                    routerDb.UseOsmData(osmStream);
                 }
+            }
+            
+            routerDb.PrepareFor(profile);
 
-                var router = new Router(routerDb);
-                var mapMatchResult = router.Match(track, new MapMatcherSettings()
-                {
-                    Profile = vehicle.Shortest().FullName
-                });
-                if (mapMatchResult.IsError)
-                {
-                    return (false, mapMatchResult.ErrorMessage);
-                }
+            var routingNetwork = routerDb.Latest;
+
+#if DEBUG
+            //File.WriteAllText(test.OsmDataFile + ".geojson", routerDb.GetGeoJson());
+#endif
+
+            // test route.
+            Track track;
+            if (test.TrackFile.EndsWith(".tsv"))
+            {
+                await using var stream = File.OpenRead(test.TrackFile);
+                track = FromTsv(new StreamReader(stream));
+            }
+            else
+            {
+                await using var stream = File.OpenRead(test.TrackFile);
+                track = FromGeoJson(new StreamReader(stream));
+            }
+
+            try
+            {
+                var matcher = routingNetwork.Matcher(profile);
+                var match = await matcher.MatchAsync(track);
+                if (match.IsError) return (false, match.ErrorMessage);
 
                 // check route.
-                var result = mapMatchResult.Value;
-                var route = router.ToRoute(result);
-                var routeLineString = route.ToLineString();
+                var result = match.Value;
+                var routes = matcher.Route(result).Value;
+                var routeLineString = routes.ToMultiLineString();
                 var expectedBuffered = BufferOp.Buffer(test.Expected, 0.00005);
                 if (!expectedBuffered.Covers(routeLineString))
                 {
-                    File.WriteAllText(test.TrackFile + ".failed.geojson",
-                        BuildErrorOutput(router, route, result.RouterPoints, expectedBuffered, track).ToGeoJson());
+                    await File.WriteAllTextAsync(test.TrackFile + ".track.geojson",
+                        track.ToGeoJson());
+                    await File.WriteAllTextAsync(test.TrackFile + ".failed.geojson",
+                        BuildErrorOutput(routes, expectedBuffered, track).ToGeoJson());
+                    await File.WriteAllTextAsync(test.TrackFile + ".network.geojson",
+                        routingNetwork.ToGeoJson());
                     return (false, "Route outside of expected buffer.");
                 }
 #if DEBUG
                 else
                 {
-                    File.WriteAllText(test.TrackFile + ".expected.geojson",
-                        BuildErrorOutput(router, route, result.RouterPoints, expectedBuffered, track).ToGeoJson());
+                    await File.WriteAllTextAsync(test.TrackFile + ".expected.geojson",
+                        BuildErrorOutput(routes, expectedBuffered, track).ToGeoJson());
                 }
 #endif
 
@@ -107,90 +112,77 @@ namespace Itinero.MapMatching.Test.Functional
             }
             catch (Exception e)
             {
+                await File.WriteAllTextAsync(test.TrackFile + ".network.geojson",
+                    routingNetwork.ToGeoJson());
+                await File.WriteAllTextAsync(test.TrackFile + ".track.geojson",
+                    track.ToGeoJson());
                 return (false, e.ToString());
             }
         }
-
-        private static FeatureCollection BuildErrorOutput(Router router, Route route, IEnumerable<RouterPoint> points, Geometry buffer,
-            Track track)
+        catch (Exception e)
         {
-            var features = new FeatureCollection();
-
-            features.Add(new Feature(route.ToLineString(), 
-                new AttributesTable {{"type", "route"}}));
-
-            var coordinates = new List<Coordinate>();
-            foreach (var point in points)
-            {
-                features.Add(new Feature(new LineString(new []
-                {
-                    new Coordinate(point.Location().Longitude, 
-                        point.Location().Latitude),
-                    new Coordinate(point.LocationOnNetwork(router.Db).Longitude,
-                        point.LocationOnNetwork(router.Db).Latitude), 
-                }), new AttributesTable{{"type", "snapline"}}));
-                coordinates.Add(new Coordinate(point.Location().Longitude, 
-                    point.Location().Latitude));
-            }
-            var lineString = new LineString(coordinates.ToArray());
-            features.Add(new Feature(lineString, new AttributesTable{{ "type", "track"}}));
-
-            features.Add(new Feature(buffer, new AttributesTable{{"type", "buffer"}}));
-
-            return features;
+            return (false, e.ToString());
         }
-        
-        private static Track FromTsv(TextReader reader)
+    }
+
+    private static FeatureCollection BuildErrorOutput(IEnumerable<Route> routes, Geometry buffer, Track track)
+    {
+        var features = new FeatureCollection();
+
+        foreach (var route in routes)
         {
-            var track = new List<(Itinero.LocalGeo.Coordinate, DateTime?, float?)>();
-
-            string line;
-            while((line = reader.ReadLine()) != null)
-            {
-                if (line.Length == 0 || line[0] == '#')
-                {
-                    continue;
-                }
-                var fields = line.Split("\t");
-
-                var time = fields[0].Equals("None") ? (DateTime?) null : DateTime.Parse(fields[0]);
-
-                var lat = float.Parse(fields[1]);
-                var lon = float.Parse(fields[2]);
-
-                float? maybeHdop = null;
-                if (!fields[3].Equals("None") && float.TryParse(fields[3], out var hdop))
-                    maybeHdop = hdop;
-
-                track.Add((new Itinero.LocalGeo.Coordinate(lat, lon), time, maybeHdop));
-            }
-
-            return new Track(track);
+            features.Add(new Feature(route.ToLineString(),
+                new AttributesTable { { "type", "route" } }));
         }
-        
-        private static Track FromGeoJson(TextReader reader)
+
+        foreach (var feature in track.ToFeatures()) features.Add(feature);
+
+        features.Add(new Feature(buffer, new AttributesTable { { "type", "buffer" } }));
+
+        return features;
+    }
+
+    private static Track FromTsv(TextReader reader)
+    {
+        var track = new List<TrackPoint>();
+
+        while (reader.ReadLine() is { } line)
         {
-            var track = new List<(Itinero.LocalGeo.Coordinate, DateTime?, float?)>();
-            var jsonSerializer = NetTopologySuite.IO.GeoJsonSerializer.Create();
-            var featureCollection = jsonSerializer.Deserialize<FeatureCollection>(new JsonTextReader(reader));
-            foreach (var feature in featureCollection)
-            {
-                if (feature.Geometry is LineString lineString)
-                {
-                    for (var i = 0; i < lineString.Coordinates.Length; i++)
-                    {
-                        if (track.Count > 0 && i == 0) continue;
+            if (line.Length == 0 || line[0] == '#') continue;
 
-                        var c = lineString.Coordinates[i];
-                        
-                        track.Add((new Itinero.LocalGeo.Coordinate((float)c.Y, (float)c.X), null, null));
-                    }
-                }
-            }
+            var fields = line.Split("\t");
 
-            if (track.Count == 0) throw new Exception("No track found.");
-            
-            return new Track(track);
+            var lat = double.Parse(fields[1], NumberStyles.Any, CultureInfo.InvariantCulture);
+            var lon = double.Parse(fields[2], NumberStyles.Any, CultureInfo.InvariantCulture);
+
+
+            track.Add(new TrackPoint(lat, lon));
         }
+
+        return new Track(track, ArraySegment<TrackSegment>.Empty);
+    }
+
+    private static Track FromGeoJson(TextReader reader)
+    {
+        var track = new List<TrackPoint>();
+        var jsonSerializer = NetTopologySuite.IO.GeoJsonSerializer.Create();
+        var featureCollection = jsonSerializer.Deserialize<FeatureCollection>(new JsonTextReader(reader));
+        foreach (var feature in featureCollection)
+        {
+            if (feature.Geometry is not LineString lineString) continue;
+
+            for (var i = 0; i < lineString.Coordinates.Length; i++)
+            {
+                if (track.Count > 0 && i == 0) continue;
+
+                var c = lineString.Coordinates[i];
+
+                track.Add(new TrackPoint(c.X, c.Y));
+            }
+        }
+
+        if (track.Count == 0) throw new Exception("No track found.");
+
+        return new Track(track, ArraySegment<TrackSegment>.Empty);
     }
 }

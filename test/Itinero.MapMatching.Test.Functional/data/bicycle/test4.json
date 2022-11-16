@@ -2,7 +2,7 @@
     "description": "A bad coarse track.",
     "profile": {
         "name": "bicycle.shortest",
-        "file": "data/bicycle.lua"
+        "file": "data/bicycle.fast.lua"
     },
     "trackfile": "data/bicycle/test4-track.geojson",
     "osmdatafile": "data/bicycle/test4-network.osm.pbf",
