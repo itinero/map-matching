@@ -2,13 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Itinero.Geo;
+using Itinero.IO.Json.GeoJson;
 using Itinero.IO.Osm;
+using Itinero.MapMatching.IO.GeoJson;
 using Itinero.MapMatching.Test.Functional.Domain;
 using Itinero.Profiles;
 using Itinero.Profiles.Lua;
+using Itinero.Routes;
+using Neo.IronLua;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.Operation.Buffer;
 using Newtonsoft.Json;
 using OsmSharp.Streams;
 
@@ -22,7 +29,9 @@ internal static class TestBench
     {
         if (Profiles.TryGetValue(vehicleFile, out var vehicle)) return vehicle;
 
-        vehicle = LuaProfile.Load(File.ReadAllText(vehicleFile));
+        var name = new FileInfo(vehicleFile).Name;
+        name = name[..name.LastIndexOf(".", StringComparison.Ordinal)];
+        vehicle = LuaProfile.Load(File.ReadAllText(vehicleFile), name);
         Profiles[vehicleFile] = vehicle;
         return vehicle;
     }
@@ -68,30 +77,45 @@ internal static class TestBench
                 track = FromGeoJson(new StreamReader(stream));
             }
 
-            var matcher = routingNetwork.Matcher(profile);
-            var match = await matcher.MatchAsync(track);
-            if (match.IsError) return (false, match.ErrorMessage);
+            try
+            {
+                var matcher = routingNetwork.Matcher(profile);
+                var match = await matcher.MatchAsync(track);
+                if (match.IsError) return (false, match.ErrorMessage);
 
-            // // check route.
-            // var result = match.Value;
-            // var route = matcher.Routes(result).Value.First();
-            // var routeLineString = route.ToLineString();
-            // var expectedBuffered = BufferOp.Buffer(test.Expected, 0.00005);
-            // if (!expectedBuffered.Covers(routeLineString))
-            // {
-            //     File.WriteAllText(test.TrackFile + ".failed.geojson",
-            //         BuildErrorOutput(route, expectedBuffered, track).ToGeoJson());
-            //     return (false, "Route outside of expected buffer.");
-            // }
-            // #if DEBUG
-            //                 else
-            //                 {
-            //                     File.WriteAllText(test.TrackFile + ".expected.geojson",
-            //                         BuildErrorOutput(route, expectedBuffered, track).ToGeoJson());
-            //                 }
-            // #endif
+                // check route.
+                var result = match.Value;
+                var routes = matcher.Route(result).Value;
+                var routeLineString = routes.ToMultiLineString();
+                var expectedBuffered = BufferOp.Buffer(test.Expected, 0.00005);
+                if (!expectedBuffered.Covers(routeLineString))
+                {
+                    await File.WriteAllTextAsync(test.TrackFile + ".track.geojson",
+                        track.ToGeoJson());
+                    await File.WriteAllTextAsync(test.TrackFile + ".failed.geojson",
+                        BuildErrorOutput(routes, expectedBuffered, track).ToGeoJson());
+                    await File.WriteAllTextAsync(test.TrackFile + ".network.geojson",
+                        routingNetwork.ToGeoJson());
+                    return (false, "Route outside of expected buffer.");
+                }
+#if DEBUG
+                else
+                {
+                    await File.WriteAllTextAsync(test.TrackFile + ".expected.geojson",
+                        BuildErrorOutput(routes, expectedBuffered, track).ToGeoJson());
+                }
+#endif
 
-            return (true, string.Empty);
+                return (true, string.Empty);
+            }
+            catch (Exception e)
+            {
+                await File.WriteAllTextAsync(test.TrackFile + ".network.geojson",
+                    routingNetwork.ToGeoJson());
+                await File.WriteAllTextAsync(test.TrackFile + ".track.geojson",
+                    track.ToGeoJson());
+                return (false, e.ToString());
+            }
         }
         catch (Exception e)
         {
@@ -99,20 +123,23 @@ internal static class TestBench
         }
     }
 
-    // private static FeatureCollection BuildErrorOutput(Route route, Geometry buffer, Track track)
-    // {
-    //     var features = new FeatureCollection();
-    //
-    //     features.Add(new Feature(route.ToLineString(), 
-    //         new AttributesTable {{"type", "route"}}));
-    //
-    //     foreach (var feature in track.ToFeatures()) features.Add(feature);
-    //
-    //     features.Add(new Feature(buffer, new AttributesTable{{"type", "buffer"}}));
-    //
-    //     return features;
-    // }
-    //
+    private static FeatureCollection BuildErrorOutput(IEnumerable<Route> routes, Geometry buffer, Track track)
+    {
+        var features = new FeatureCollection();
+
+        foreach (var route in routes)
+        {
+            features.Add(new Feature(route.ToLineString(),
+                new AttributesTable { { "type", "route" } }));
+        }
+
+        foreach (var feature in track.ToFeatures()) features.Add(feature);
+
+        features.Add(new Feature(buffer, new AttributesTable { { "type", "buffer" } }));
+
+        return features;
+    }
+
     private static Track FromTsv(TextReader reader)
     {
         var track = new List<TrackPoint>();

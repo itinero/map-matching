@@ -8,10 +8,14 @@ public class GraphModel
     private readonly List<GraphNode> _nodes = new();
     private readonly Dictionary<int, List<GraphEdge>> _edges = new();
 
-    public GraphModel()
+    public GraphModel(Track track)
     {
-
+        this.Track = track;
     }
+    
+    public Track Track { get; }
+
+    public int Count => _nodes.Count;
 
     public int? FirstNode { get; private set; }
 

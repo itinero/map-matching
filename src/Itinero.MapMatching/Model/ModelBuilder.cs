@@ -1,10 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using Itinero.Geo;
 using Itinero.Network;
 using Itinero.Profiles;
 using Itinero.Routing;
 using Itinero.Snapping;
-using Reminiscence.Collections;
 
 namespace Itinero.MapMatching.Model;
 
@@ -24,7 +26,7 @@ public class ModelBuilder
     /// <returns>The graph model with probabilities as costs.</returns>
     public async Task<GraphModel> BuildModel(Track track, Profile profile)
     {
-        var model = new GraphModel();
+        var model = new GraphModel(track);
 
         // for these parameter see paper in the repo.
 
@@ -34,7 +36,7 @@ public class ModelBuilder
         const int d = 50;
         // ratio between node costs and transition costs
         // 1 = only transition and 0 only node weights.
-        const double alpha = 0.65;
+        const double alpha = 0.5;
 
         const double beta = alpha / (1 - alpha) * (d / t);
 
@@ -48,11 +50,18 @@ public class ModelBuilder
             var trackPointLocation = (trackPoint.Location.longitude, trackPoint.Location.latitude, (float?)null);
             var trackPointLayer = new List<int>();
 
-            await foreach (var snapPoint in _routingNetwork.Snap()
+            var hasCandidate = false;
+            await foreach (var snapPoint in _routingNetwork.Snap().Using(profile, s =>
+                               {
+                                   s.OffsetInMeter = 1000;
+                                   s.OffsetInMeterMax = 2000;
+                               })
                                .ToAllAsync(trackPointLocation))
             {
                 var cost = trackPointLocation.DistanceEstimateInMeter(snapPoint.LocationOnNetwork(_routingNetwork));
-
+                if (cost > d) continue;
+                hasCandidate = true;
+                
                 // add node.
                 var node = new GraphNode()
                 {
@@ -63,21 +72,45 @@ public class ModelBuilder
                 var nodeId = model.AddNode(node);
                 trackPointLayer.Add(nodeId);
 
+                var distance = 0.0;
+                if (i > 0)
+                {
+                    var previousTrackPoint = track[i - 1];
+                    var previousTrackPointLocation = (previousTrackPoint.Location.longitude, previousTrackPoint.Location.latitude, (float?)null);
+                    distance = previousTrackPointLocation.DistanceEstimateInMeter(trackPointLocation);
+                }
+
                 // add edges from previous layer.
                 foreach (var previousNode in previousLayer)
                 {
                     var previousSnapPoint = model.GetNode(previousNode).SnapPoint;
                     var hopCost = 0.0;
+                    var attributes = new List<(string key, string value)>();
                     if (previousSnapPoint != null)
                     {
-                        var routeDistance = await this.RouteDistanceAsync(previousSnapPoint.Value,
-                            snapPoint, profile);
-                        if (routeDistance == null) continue;
+                        double? routeDistance = 0.0;
 
-                        var distance = this.Distance(previousSnapPoint.Value, snapPoint);
+                        var c = 0.0;
+                        if (previousSnapPoint.Value.EdgeId != snapPoint.EdgeId &&
+                            previousSnapPoint.Value.Offset != snapPoint.Offset)
+                        {
+                            
+                            routeDistance = await this.RouteDistanceAsync(previousSnapPoint.Value,
+                                snapPoint, profile);
+                            if (routeDistance == null) continue;
+                            
+                            c = routeDistance.Value / distance;
+                        }
+                        else
+                        {
+                            c = 0;
+                        }
 
-                        var c = routeDistance.Value / distance;
                         if (c > t) continue;
+                        
+                        attributes.Add(("distance", distance.ToString(CultureInfo.InvariantCulture)));
+                        attributes.Add(("c", c.ToString(CultureInfo.InvariantCulture)));
+                        attributes.Add(("route_distance", routeDistance.Value.ToString(CultureInfo.InvariantCulture)));
 
                         hopCost = c * beta;
                     }
@@ -85,13 +118,17 @@ public class ModelBuilder
                     {
                         Node1 = previousNode,
                         Node2 = nodeId,
-                        Cost = hopCost
+                        Cost = hopCost,
+                        Attributes = attributes
                     });
                 }
             }
 
             // the previous layer is now the current layer.
-            previousLayer = trackPointLayer;
+            if (hasCandidate)
+            {
+                previousLayer = trackPointLayer;
+            }
         }
 
         var endNode = new GraphNode();

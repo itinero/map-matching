@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using Itinero.Routes;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 
@@ -20,6 +22,11 @@ internal static class GeoJsonExtensions
         jsonSerializer.Serialize(jsonStream, featureCollection);
         var json = jsonStream.ToString();
         return json;
+    }
+
+    public static MultiLineString ToMultiLineString(this IEnumerable<Route> route)
+    {
+        return new MultiLineString(route.Select(Itinero.Geo.RouteExtensions.ToLineString).ToArray());
     }
 
     public static FeatureCollection ToFeatures(this Track track)

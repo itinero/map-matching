@@ -2,7 +2,7 @@
     "description": "A simple one hop coarse track.",
     "profile": {
         "name": "bicycle.shortest",
-        "file": "data/bicycle.lua"
+      "file": "data/bicycle.fast.lua"
     },
     "trackfile": "data/bicycle/test5-track.geojson",
     "osmdatafile": "data/bicycle/test5-network.osm.pbf",

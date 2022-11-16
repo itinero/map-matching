@@ -22,13 +22,15 @@ public class ModelSolver
         {
             pointer = binaryHeap.Pop(out var priority);
             pathTree.Get(pointer, out var node, out var previous);
+            var popSuccess = !settled.Contains((int)node);
             while (binaryHeap.Count > 0 &&
-                   settled.Contains((int)node))
+                   !popSuccess)
             {
                 pointer = binaryHeap.Pop(out priority);
-                pathTree.Get(pointer, out node, out previous);
+                pathTree.Get(pointer, out node, out previous); 
+                popSuccess = !settled.Contains((int)node);
             }
-            if (binaryHeap.Count == 0) break;
+            if (popSuccess == false) break;
             settled.Add((int)node);
 
             if (node == model.LastNode)

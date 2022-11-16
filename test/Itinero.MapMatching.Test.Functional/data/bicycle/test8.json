@@ -2,7 +2,7 @@
     "description": "A real-life track.",
     "profile": {
         "name": "bicycle.shortest",
-        "file": "data/bicycle.lua"
+      "file": "data/bicycle.fast.lua"
     },
     "trackfile": "data/bicycle/test8-track.geojson",
     "osmdatafile": "data/bicycle/test8-network.osm.pbf",
