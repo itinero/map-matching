@@ -9,7 +9,7 @@ namespace Itinero.MapMatching.Test.Functional;
 
 internal class Program
 {
-    private static async Task Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Fatal()
@@ -23,15 +23,15 @@ internal class Program
         // all tests.
         var tests = new[]
         {
-            //Path.Combine("data", "bicycle", "test1.json"),
-            //Path.Combine("data", "bicycle", "test2.json"),
-            //Path.Combine("data", "bicycle", "test3.json"),
-            //Path.Combine("data", "bicycle", "test4.json"), 
-            //Path.Combine("data", "bicycle", "test5.json"),
-            //Path.Combine("data", "bicycle", "test6.json"),
-            //Path.Combine("data", "bicycle", "test7.json"),
+            Path.Combine("data", "bicycle", "test1.json"),
+            Path.Combine("data", "bicycle", "test2.json"),
+            Path.Combine("data", "bicycle", "test3.json"),
+            Path.Combine("data", "bicycle", "test4.json"), 
+            Path.Combine("data", "bicycle", "test5.json"),
+            Path.Combine("data", "bicycle", "test6.json"),
+            Path.Combine("data", "bicycle", "test7.json"),
             Path.Combine("data", "bicycle", "test8.json"),
-            //Path.Combine("data", "bicycle", "test9.json"),
+            Path.Combine("data", "bicycle", "test9.json"),
             // Path.Combine("data", "car", "test1.json"),
             // Path.Combine("data", "car", "test2.json"),
             // Path.Combine("data", "car", "test3.json"),
@@ -40,6 +40,7 @@ internal class Program
         };
 
         // run all for them.
+        var failed = false;
         foreach (var test in tests)
         {
             // read event template.
@@ -52,16 +53,18 @@ internal class Program
             var result = await testData.RunAsync();
             if (!result.success)
             {
-#if DEBUG
                 Console.WriteLine($"...FAIL: {result.message}");
+                failed = true;
                 continue;
-#endif
-                throw new Exception($"Test failed: {result.message}");
             }
             else
             {
                 Console.WriteLine("...OK");
             }
         }
+
+        if (failed) return -1;
+
+        return 0;
     }
 }

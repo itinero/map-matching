@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Itinero.Profiles.Lua" Version="2.0.0-alpha-059" />
+    <PackageReference Include="Itinero.Profiles.Lua" Version="2.0.0-alpha-060" />
   </ItemGroup>
 
 

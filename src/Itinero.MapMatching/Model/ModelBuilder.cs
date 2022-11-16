@@ -148,12 +148,6 @@ public class ModelBuilder
         return model;
     }
 
-    private double Distance(SnapPoint snapPoint1, SnapPoint snapPoint2)
-    {
-        return snapPoint1.LocationOnNetwork(_routingNetwork).DistanceEstimateInMeter(
-            snapPoint2.LocationOnNetwork(_routingNetwork));
-    }
-
     private async Task<double?> RouteDistanceAsync(SnapPoint snapPoint1, SnapPoint snapPoint2, Profile profile)
     {
         var route = await _routingNetwork.Route(profile).From(snapPoint1).To(snapPoint2).CalculateAsync();
