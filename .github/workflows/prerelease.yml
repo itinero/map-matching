@@ -14,7 +14,11 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 3.1.301
+        dotnet-version: 6.0.x
+            
+    - name: Add GitHub Nuget Source
+      run: dotnet nuget add source https://nuget.pkg.github.com/itinero/index.json -n itinero -u xivk -p ${{secrets.PACKAGES_SECRET }} --store-password-in-clear-text
+
     - name: Install dependencies
       run: dotnet restore
     - name: Build
