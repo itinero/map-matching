@@ -69,7 +69,7 @@ public class MapMatcher
             var path = await router.From(source.Value).To(target.Value).Path(CancellationToken.None);
             if (path.IsError)
                 throw new Exception(
-                    "Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before.");
+                    $"Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before: {path.ErrorMessage}");
             rawPaths.Add(path);
             if (rawPaths.Count == 218) Debug.WriteLine("break");
         }

@@ -20,7 +20,7 @@
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
-    <PackageVersion>0.0.2-pre002</PackageVersion>
+    <PackageVersion>0.0.2-pre003</PackageVersion>
     <Title>Itinero Map Matching</Title>
     <PackageLicenseUrl>https://github.com/itinero/map-matching/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>

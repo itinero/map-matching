@@ -31,8 +31,23 @@ public static class MapMatcherExtensions
         return routes;
     }
 
+    public static IEnumerable<Route> Route(this MapMatcher matcher, MapMatch match)
+    {
+        if (matcher.Settings.Profile == null) throw new Exception("Cannot build routes without a profile");
+
+        var paths = matcher.MergedPaths(match);
+                
+        var routes = new List<Route>();
+        foreach (var path in paths)
+        {
+            var route = RouteBuilder.Default.Build(matcher.RoutingNetwork, matcher.Settings.Profile, path);
+            routes.Add(route);
+        }
+
+        return routes;
+    }
     
-    public static Result<IEnumerable<Route>> Route(this MapMatcher matcher, MapMatch match)
+    public static IEnumerable<Path> MergedPaths(this MapMatcher matcher, MapMatch match)
     {
         if (matcher.Settings.Profile == null) throw new Exception("Cannot build routes without a profile");
         
@@ -64,15 +79,8 @@ public static class MapMatcherExtensions
         {
             paths.Add(currentPath);
         }
-                
-        var routes = new List<Route>();
-        foreach (var path in paths)
-        {
-            var route = RouteBuilder.Default.Build(matcher.RoutingNetwork, matcher.Settings.Profile, path);
-            routes.Add(route);
-        }
 
-        return routes;
+        return paths;
     }
 
     private static Path? TryAppend(this Path path, Path next)

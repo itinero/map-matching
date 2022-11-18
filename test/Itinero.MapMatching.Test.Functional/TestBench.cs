@@ -83,7 +83,7 @@ internal static class TestBench
 
                 // check route.
                 var result = match.Value;
-                var routes = matcher.Route(result).Value;
+                var routes = matcher.Route(result);
                 var routeLineString = routes.ToMultiLineString();
                 var expectedBuffered = BufferOp.Buffer(test.Expected, 0.00005);
                 if (!expectedBuffered.Covers(routeLineString))
