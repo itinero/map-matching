@@ -96,7 +96,7 @@ public class ModelBuilder
                         {
                             
                             routeDistance = await this.RouteDistanceAsync(previousSnapPoint.Value,
-                                snapPoint, profile);
+                                snapPoint, profile, distance * t);
                             if (routeDistance == null) continue;
                             
                             c = routeDistance.Value / distance;
@@ -148,9 +148,13 @@ public class ModelBuilder
         return model;
     }
 
-    private async Task<double?> RouteDistanceAsync(SnapPoint snapPoint1, SnapPoint snapPoint2, Profile profile)
+    private async Task<double?> RouteDistanceAsync(SnapPoint snapPoint1, SnapPoint snapPoint2, Profile profile, double maxDistance)
     {
-        var route = await _routingNetwork.Route(profile).From(snapPoint1).To(snapPoint2).CalculateAsync();
+        var route = await _routingNetwork.Route(new RoutingSettings()
+        {
+            MaxDistance = maxDistance,
+            Profile = profile
+        }).From(snapPoint1).To(snapPoint2).CalculateAsync();
         if (route.IsError) return null;
 
         return route.Value.TotalDistance;

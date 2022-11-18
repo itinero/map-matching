@@ -1,8 +1,8 @@
 {
     "description": "A bad coarse track.",
     "profile": {
-        "name": "car.shortest",
-        "file": "data/car.lua"
+      "name": "car.short",
+      "file": "data/car.short.lua"
     },
     "trackfile": "data/car/test4-track.geojson",
     "osmdatafile": "data/car/test4-network.osm.pbf",

@@ -61,11 +61,7 @@ internal static class TestBench
             routerDb.PrepareFor(profile);
 
             var routingNetwork = routerDb.Latest;
-
-#if DEBUG
-            //File.WriteAllText(test.OsmDataFile + ".geojson", routerDb.GetGeoJson());
-#endif
-
+            
             // test route.
             Track track;
             if (test.TrackFile.EndsWith(".tsv"))
@@ -100,13 +96,11 @@ internal static class TestBench
                         routingNetwork.ToGeoJson());
                     return (false, "Route outside of expected buffer.");
                 }
-#if DEBUG
                 else
                 {
                     await File.WriteAllTextAsync(test.TrackFile + ".expected.geojson",
                         BuildErrorOutput(routes, expectedBuffered, track).ToGeoJson());
                 }
-#endif
 
                 return (true, string.Empty);
             }
