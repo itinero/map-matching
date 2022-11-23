@@ -60,7 +60,7 @@ public static class MapMatcherExtensions
         while (merge)
         {
             merge = false;
-            
+
             Path? currentPath = null;
             foreach (var path in toMerge)
             {
@@ -82,9 +82,9 @@ public static class MapMatcherExtensions
                         // merged = currentPath.TryMergeOverlap(path);
                         // if (merged == null)
                         // {
-                            paths.Add(currentPath);
-                            currentPath = path;
-                            continue;
+                        paths.Add(currentPath);
+                        currentPath = path;
+                        continue;
                         // }
                     }
                 }
