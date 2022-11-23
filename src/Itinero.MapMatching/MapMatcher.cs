@@ -60,8 +60,10 @@ public class MapMatcher
         var router = _routingNetwork.Route(_profile);
         for (var l = 2; l < bestMatch.Count - 1; l++)
         {
-            var source = trackModel.GetNode(bestMatch[l - 1]).SnapPoint;
-            var target = trackModel.GetNode(bestMatch[l]).SnapPoint;
+            var sourceNode = trackModel.GetNode(bestMatch[l - 1]);
+            var source = sourceNode.SnapPoint;
+            var targetNode = trackModel.GetNode(bestMatch[l]);
+            var target = targetNode.SnapPoint;
 
             if (source == null) throw new Exception("Track point should have a snap point");
             if (target == null) throw new Exception("Track point should have a snap point");

@@ -27,7 +27,7 @@ public class ModelSolver
                    !popSuccess)
             {
                 pointer = binaryHeap.Pop(out priority);
-                pathTree.Get(pointer, out node, out previous); 
+                pathTree.Get(pointer, out node, out previous);
                 popSuccess = !settled.Contains((int)node);
             }
             if (popSuccess == false) break;

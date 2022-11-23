@@ -57,11 +57,11 @@ internal static class TestBench
                     routerDb.UseOsmData(osmStream);
                 }
             }
-            
+
             routerDb.PrepareFor(profile);
 
             var routingNetwork = routerDb.Latest;
-            
+
             // test route.
             Track track;
             if (test.TrackFile.EndsWith(".tsv"))

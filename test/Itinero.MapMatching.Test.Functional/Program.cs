@@ -26,7 +26,7 @@ internal class Program
             Path.Combine("data", "bicycle", "test1.json"),
             Path.Combine("data", "bicycle", "test2.json"),
             Path.Combine("data", "bicycle", "test3.json"),
-            Path.Combine("data", "bicycle", "test4.json"), 
+            Path.Combine("data", "bicycle", "test4.json"),
             Path.Combine("data", "bicycle", "test5.json"),
             Path.Combine("data", "bicycle", "test6.json"),
             Path.Combine("data", "bicycle", "test7.json"),

@@ -61,14 +61,9 @@ public class ModelBuilder
                 var cost = trackPointLocation.DistanceEstimateInMeter(snapPoint.LocationOnNetwork(_routingNetwork));
                 if (cost > d) continue;
                 hasCandidate = true;
-                
+
                 // add node.
-                var node = new GraphNode()
-                {
-                    TrackPoint = i,
-                    SnapPoint = snapPoint,
-                    Cost = cost
-                };
+                var node = new GraphNode() { TrackPoint = i, SnapPoint = snapPoint, Cost = cost };
                 var nodeId = model.AddNode(node);
                 trackPointLayer.Add(nodeId);
 
@@ -76,7 +71,8 @@ public class ModelBuilder
                 if (i > 0)
                 {
                     var previousTrackPoint = track[i - 1];
-                    var previousTrackPointLocation = (previousTrackPoint.Location.longitude, previousTrackPoint.Location.latitude, (float?)null);
+                    var previousTrackPointLocation = (previousTrackPoint.Location.longitude,
+                        previousTrackPoint.Location.latitude, (float?)null);
                     distance = previousTrackPointLocation.DistanceEstimateInMeter(trackPointLocation);
                 }
 
@@ -91,29 +87,29 @@ public class ModelBuilder
                         double? routeDistance = 0.0;
 
                         var c = 0.0;
-                        if (previousSnapPoint.Value.EdgeId != snapPoint.EdgeId &&
-                            previousSnapPoint.Value.Offset != snapPoint.Offset)
-                        {
-                            
-                            routeDistance = await this.RouteDistanceAsync(previousSnapPoint.Value,
-                                snapPoint, profile, distance * t);
-                            if (routeDistance == null) continue;
-                            
-                            c = routeDistance.Value / distance;
-                        }
-                        else
+                        if (previousSnapPoint.Value.EdgeId == snapPoint.EdgeId &&
+                            previousSnapPoint.Value.Offset == snapPoint.Offset)
                         {
                             c = 0;
                         }
+                        else
+                        {
+                            routeDistance = await this.RouteDistanceAsync(previousSnapPoint.Value,
+                                snapPoint, profile, distance * t);
+                            if (routeDistance == null) continue;
+
+                            c = routeDistance.Value / distance;
+                        }
 
                         if (c > t) continue;
-                        
+
                         attributes.Add(("distance", distance.ToString(CultureInfo.InvariantCulture)));
                         attributes.Add(("c", c.ToString(CultureInfo.InvariantCulture)));
                         attributes.Add(("route_distance", routeDistance.Value.ToString(CultureInfo.InvariantCulture)));
 
                         hopCost = c * beta;
                     }
+
                     model.AddEdge(new GraphEdge()
                     {
                         Node1 = previousNode,
@@ -148,13 +144,11 @@ public class ModelBuilder
         return model;
     }
 
-    private async Task<double?> RouteDistanceAsync(SnapPoint snapPoint1, SnapPoint snapPoint2, Profile profile, double maxDistance)
+    private async Task<double?> RouteDistanceAsync(SnapPoint snapPoint1, SnapPoint snapPoint2, Profile profile,
+        double maxDistance)
     {
-        var route = await _routingNetwork.Route(new RoutingSettings()
-        {
-            MaxDistance = maxDistance,
-            Profile = profile
-        }).From(snapPoint1).To(snapPoint2).CalculateAsync();
+        var route = await _routingNetwork.Route(new RoutingSettings() { MaxDistance = maxDistance, Profile = profile })
+            .From(snapPoint1).To(snapPoint2).CalculateAsync();
         if (route.IsError) return null;
 
         return route.Value.TotalDistance;

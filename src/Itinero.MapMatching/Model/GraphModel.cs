@@ -12,7 +12,7 @@ public class GraphModel
     {
         this.Track = track;
     }
-    
+
     public Track Track { get; }
 
     public int Count => _nodes.Count;

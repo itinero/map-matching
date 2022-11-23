@@ -24,17 +24,17 @@ public static class GraphModelExtensions
 
         return Encoding.UTF8.GetString(stream.ToArray());
     }
-    
+
     public static void WriteFeatures(this Utf8JsonWriter jsonWriter, GraphModel graphModel, RoutingNetwork routingNetwork)
     {
         var track = graphModel.Track;
         jsonWriter.WriteFeatures(track);
-        
+
         for (var n = 0; n < graphModel.Count; n++)
         {
             var node = graphModel.GetNode(n);
-            if(node.SnapPoint == null) continue;
-            
+            if (node.SnapPoint == null) continue;
+
             var nodeLocation = node.SnapPoint.Value.LocationOnNetwork(routingNetwork);
             jsonWriter.WriteFeatureStart();
             jsonWriter.WriteGeometryStart();
@@ -49,13 +49,13 @@ public static class GraphModelExtensions
                 ("cost", node.Cost.ToString(CultureInfo.InvariantCulture))
             });
             jsonWriter.WriteFeatureEnd();
-            
+
             if (node.TrackPoint == null) continue;
             var trackPoint = track[node.TrackPoint.Value];
-            
+
             jsonWriter.WriteFeatureStart();
             jsonWriter.WriteGeometryStart();
-            jsonWriter.WriteLineString(new []
+            jsonWriter.WriteLineString(new[]
             {
                 nodeLocation,
                 (trackPoint.Location.longitude, trackPoint.Location.latitude, null)
@@ -90,7 +90,7 @@ public static class GraphModelExtensions
 
                 jsonWriter.WriteFeatureStart();
                 jsonWriter.WriteGeometryStart();
-                jsonWriter.WriteLineString(new []
+                jsonWriter.WriteLineString(new[]
                 {
                     node1Location,
                     node2Location

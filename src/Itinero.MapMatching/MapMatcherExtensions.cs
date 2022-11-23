@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Itinero.Network;
 using Itinero.Routes;
 using Itinero.Routes.Builders;
 using Itinero.Routes.Paths;
@@ -20,7 +22,7 @@ public static class MapMatcherExtensions
     public static Result<IEnumerable<Route>> Routes(this MapMatcher matcher, MapMatch match)
     {
         if (matcher.Settings.Profile == null) throw new Exception("Cannot build routes without a profile");
-        
+
         var routes = new List<Route>();
         foreach (var path in match)
         {
@@ -36,7 +38,7 @@ public static class MapMatcherExtensions
         if (matcher.Settings.Profile == null) throw new Exception("Cannot build routes without a profile");
 
         var paths = matcher.MergedPaths(match);
-                
+
         var routes = new List<Route>();
         foreach (var path in paths)
         {
@@ -46,47 +48,67 @@ public static class MapMatcherExtensions
 
         return routes;
     }
-    
+
     public static IEnumerable<Path> MergedPaths(this MapMatcher matcher, MapMatch match)
     {
         if (matcher.Settings.Profile == null) throw new Exception("Cannot build routes without a profile");
-        
+
+        var toMerge = new List<Path>(match);
         var paths = new List<Path>();
 
-        Path? currentPath = null;
-        foreach (var path in match)
+        var merge = true;
+        while (merge)
         {
-            if (!path.HasLength()) continue;
+            merge = false;
             
-            if (currentPath == null)
+            Path? currentPath = null;
+            foreach (var path in toMerge)
             {
-                currentPath = path;
-                continue;
+                path.Trim();
+                if (!path.HasLength()) continue;
+
+                if (currentPath == null)
+                {
+                    currentPath = path;
+                    continue;
+                }
+
+                var merged = currentPath.TryAppend(path);
+                if (merged == null)
+                {
+                    merged = currentPath.TryMergeAsUTurn(path);
+                    if (merged == null)
+                    {
+                        // merged = currentPath.TryMergeOverlap(path);
+                        // if (merged == null)
+                        // {
+                            paths.Add(currentPath);
+                            currentPath = path;
+                            continue;
+                        // }
+                    }
+                }
+
+                merge = true;
+                currentPath = merged;
             }
 
-            var merged = currentPath.TryAppend(path);
-            if (merged == null)
+            if (currentPath != null)
             {
                 paths.Add(currentPath);
-                currentPath = path;
-                continue;
             }
 
-            currentPath = merged;
+            toMerge = paths;
+            paths = new List<Path>();
         }
 
-        if (currentPath != null)
-        {
-            paths.Add(currentPath);
-        }
-
-        return paths;
+        return toMerge;
     }
 
     private static Path? TryAppend(this Path path, Path next)
     {
         if (!path.IsNext(next)) return null;
 
-        return new [] { path, next }.Merge();
+        return new[] { path, next }.Merge();
     }
 }
