@@ -44,7 +44,10 @@ internal static class TestBench
             var profile = LoadProfile(test.Profile.File);
 
             // load data using profile.
-            var routerDb = new RouterDb();
+            var routerDb = new RouterDb(new RouterDbConfiguration()
+            {
+                EdgeTypeMap = new DefaultAttributeSetMap()
+            });
             await using (var stream = File.OpenRead(test.OsmDataFile))
             {
                 if (test.OsmDataFile.EndsWith("osm.pbf"))
@@ -54,11 +57,14 @@ internal static class TestBench
                 else
                 {
                     var osmStream = new XmlOsmStreamSource(stream);
-                    routerDb.UseOsmData(osmStream);
+                    var osmData = osmStream.ToList();
+                    routerDb.UseOsmData(new OsmEnumerableStreamSource(osmData));
                 }
             }
 
             routerDb.PrepareFor(profile);
+
+            var geojson = routerDb.Latest.ToGeoJson();
 
             var routingNetwork = routerDb.Latest;
 
