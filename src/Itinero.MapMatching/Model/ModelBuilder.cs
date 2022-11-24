@@ -20,11 +20,35 @@ public class ModelBuilder
     }
 
     /// <summary>
-    /// Builds a graph model for the given track.
+    /// Builds one or more graph models for the given track.
     /// </summary>
     /// <param name="track">The track.</param>
-    /// <returns>The graph model with probabilities as costs.</returns>
-    public async Task<GraphModel> BuildModel(Track track, Profile profile)
+    /// <param name="profile">The profile to match with.</param>
+    /// <returns>One or more graph models with probabilities as costs.</returns>
+    public async Task<IEnumerable<GraphModel>> BuildModels(Track track, Profile profile)
+    {
+        var models = new List<GraphModel>();
+        
+        var start = 0;
+        while (start < track.Count - 1)
+        {
+            var (model, lastUsed) = await this.BuildModel(track, profile, start);
+
+            if (lastUsed == start)
+            {
+                // nothing consumed, move next.
+                start++;
+                continue;
+            }
+            
+            models.Add(model);
+            start = lastUsed;
+        }
+
+        return models;
+    }
+
+    private async Task<(GraphModel model, int index)> BuildModel(Track track, Profile profile, int start)
     {
         var model = new GraphModel(track);
 
@@ -44,13 +68,14 @@ public class ModelBuilder
         var startNode = new GraphNode();
         previousLayer.Add(model.AddNode(startNode));
 
-        for (var i = 0; i < track.Count; i++)
+        var lastPoint = start;
+        for (var i = start; i < track.Count; i++)
         {
             var trackPoint = track[i];
             var trackPointLocation = (trackPoint.Location.longitude, trackPoint.Location.latitude, (float?)null);
             var trackPointLayer = new List<int>();
 
-            var hasCandidate = false;
+            var isConnected = false;
             await foreach (var snapPoint in _routingNetwork.Snap().Using(profile, s =>
                                {
                                    s.OffsetInMeter = 1000;
@@ -60,12 +85,12 @@ public class ModelBuilder
             {
                 var cost = trackPointLocation.DistanceEstimateInMeter(snapPoint.LocationOnNetwork(_routingNetwork));
                 if (cost > d) continue;
-                hasCandidate = true;
 
                 // add node.
                 var node = new GraphNode() { TrackPoint = i, SnapPoint = snapPoint, Cost = cost };
                 var nodeId = model.AddNode(node);
-                trackPointLayer.Add(nodeId);
+
+                var nodeIsConnected = false;
 
                 var distance = 0.0;
                 if (i > 0)
@@ -95,7 +120,7 @@ public class ModelBuilder
                         else
                         {
                             routeDistance = await this.RouteDistanceAsync(previousSnapPoint.Value,
-                                snapPoint, profile, distance * t);
+                                snapPoint, profile, System.Math.Min(distance * t, 100));
                             if (routeDistance == null) continue;
 
                             c = routeDistance.Value / distance;
@@ -117,14 +142,24 @@ public class ModelBuilder
                         Cost = hopCost,
                         Attributes = attributes
                     });
+                    isConnected = true;
+                    nodeIsConnected = true;
+                }
+
+                if (nodeIsConnected)
+                {
+                    trackPointLayer.Add(nodeId);
                 }
             }
 
             // the previous layer is now the current layer.
-            if (hasCandidate)
+            if (!isConnected)
             {
-                previousLayer = trackPointLayer;
+                break;
             }
+
+            previousLayer = trackPointLayer;
+            lastPoint = i;
         }
 
         var endNode = new GraphNode();
@@ -141,7 +176,7 @@ public class ModelBuilder
             });
         }
 
-        return model;
+        return (model, lastPoint);
     }
 
     private async Task<double?> RouteDistanceAsync(SnapPoint snapPoint1, SnapPoint snapPoint2, Profile profile,

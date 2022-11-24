@@ -46,37 +46,44 @@ public class MapMatcher
     /// </summary>
     public RoutingNetwork RoutingNetwork => _routingNetwork;
 
-    public async Task<Result<MapMatch>> MatchAsync(Track track)
+    public async Task<IEnumerable<MapMatch>> MatchAsync(Track track)
     {
+        var matches = new List<MapMatch>();
+        
         // build track model.
-        var trackModel = await _modelBuilder.BuildModel(track, _profile);
-        var trackModelGeoJson = trackModel.ToGeoJson(this.RoutingNetwork);
+        var trackModels = await _modelBuilder.BuildModels(track, _profile);
 
-        // run solver.
-        var bestMatch = _modelSolver.Solve(trackModel).ToList();
-
-        // calculate the paths between each matched point pair.
-        var rawPaths = new List<Path>();
-        var router = _routingNetwork.Route(_profile);
-        for (var l = 2; l < bestMatch.Count - 1; l++)
+        foreach (var trackModel in trackModels)
         {
-            var sourceNode = trackModel.GetNode(bestMatch[l - 1]);
-            var source = sourceNode.SnapPoint;
-            var targetNode = trackModel.GetNode(bestMatch[l]);
-            var target = targetNode.SnapPoint;
+            var trackModelGeoJson = trackModel.ToGeoJson(this.RoutingNetwork);
 
-            if (source == null) throw new Exception("Track point should have a snap point");
-            if (target == null) throw new Exception("Track point should have a snap point");
+            // run solver.
+            var bestMatch = _modelSolver.Solve(trackModel).ToList();
 
-            var path = await router.From(source.Value).To(target.Value).Path(CancellationToken.None);
-            if (path.IsError)
-                throw new Exception(
-                    $"Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before: {path.ErrorMessage}");
-            rawPaths.Add(path);
-            if (rawPaths.Count == 218) Debug.WriteLine("break");
+            // calculate the paths between each matched point pair.
+            var rawPaths = new List<Path>();
+            var router = _routingNetwork.Route(_profile);
+            for (var l = 2; l < bestMatch.Count - 1; l++)
+            {
+                var sourceNode = trackModel.GetNode(bestMatch[l - 1]);
+                var source = sourceNode.SnapPoint;
+                var targetNode = trackModel.GetNode(bestMatch[l]);
+                var target = targetNode.SnapPoint;
+
+                if (source == null) throw new Exception("Track point should have a snap point");
+                if (target == null) throw new Exception("Track point should have a snap point");
+
+                var path = await router.From(source.Value).To(target.Value).Path(CancellationToken.None);
+                if (path.IsError)
+                    throw new Exception(
+                        $"Raw path calculation failed, it shouldn't fail at this point because it succeeded on the same path before: {path.ErrorMessage}");
+                rawPaths.Add(path);
+                if (rawPaths.Count == 218) Debug.WriteLine("break");
+            }
+
+            matches.Add(new MapMatch(track, _profile, rawPaths));
         }
 
-        return new Result<MapMatch>(
-            new MapMatch(track, _profile, rawPaths));
+        return matches;
     }
 }

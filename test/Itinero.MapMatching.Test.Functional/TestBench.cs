@@ -85,11 +85,9 @@ internal static class TestBench
             {
                 var matcher = routingNetwork.Matcher(profile);
                 var match = await matcher.MatchAsync(track);
-                if (match.IsError) return (false, match.ErrorMessage);
 
                 // check route.
-                var result = match.Value;
-                var routes = matcher.Route(result);
+                var routes = matcher.Routes(match);
                 var routeLineString = routes.ToMultiLineString();
                 var expectedBuffered = BufferOp.Buffer(test.Expected, 0.00005);
                 if (!expectedBuffered.Covers(routeLineString))

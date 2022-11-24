@@ -30,7 +30,7 @@ public class ModelBuilderTests
         writer.Dispose();
 
         var modelBuilder = new ModelBuilder(routerDb.Latest);
-        var model = await modelBuilder.BuildModel(track, new DefaultProfile());
+        var models = await modelBuilder.BuildModels(track, new DefaultProfile());
 
 
     }

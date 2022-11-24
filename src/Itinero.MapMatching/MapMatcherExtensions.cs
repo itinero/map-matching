@@ -33,6 +33,17 @@ public static class MapMatcherExtensions
         return routes;
     }
 
+    public static IEnumerable<Route> Routes(this MapMatcher matcher, IEnumerable<MapMatch> matches)
+    {
+        foreach (var match in matches)
+        {
+            foreach (var r in matcher.Route(match))
+            {
+                yield return r;
+            }
+        }
+    }
+
     public static IEnumerable<Route> Route(this MapMatcher matcher, MapMatch match)
     {
         if (matcher.Settings.Profile == null) throw new Exception("Cannot build routes without a profile");
@@ -53,56 +64,57 @@ public static class MapMatcherExtensions
     {
         if (matcher.Settings.Profile == null) throw new Exception("Cannot build routes without a profile");
 
-        var toMerge = new List<Path>(match);
-        var paths = new List<Path>();
-
-        var merge = true;
-        while (merge)
+        IEnumerable<Path> current = match;
+        while (true)
         {
-            merge = false;
+            var (merged1, hasMerges1) = MapMatcherExtensions.MergePaths(current,
+                (p1, p2) => p1.TryAppend(p2));
+        
+            var (merged2, hasMerges2)  = MapMatcherExtensions.MergePaths(merged1, 
+                (p1, p2) => p1.TryMergeAsUTurn(p2));
+            current = merged2;
+            
+            if (!hasMerges1 && !hasMerges2) break;
+        }
+        
+        return current;
+    }
 
-            Path? currentPath = null;
-            foreach (var path in toMerge)
+    private static (IEnumerable<Path> paths, bool merged) MergePaths(IEnumerable<Path> paths, Func<Path, Path, Path?> merge)
+    {
+        var mergedPaths = new List<Path>();
+        
+        Path? currentPath = null;
+        var hasMerges = false;
+        foreach (var path in paths)
+        {
+            path.Trim();
+            if (!path.HasLength()) continue;
+
+            if (currentPath == null)
             {
-                path.Trim();
-                if (!path.HasLength()) continue;
-
-                if (currentPath == null)
-                {
-                    currentPath = path;
-                    continue;
-                }
-
-                var merged = currentPath.TryAppend(path);
-                if (merged == null)
-                {
-                    merged = currentPath.TryMergeAsUTurn(path);
-                    if (merged == null)
-                    {
-                        // merged = currentPath.TryMergeOverlap(path);
-                        // if (merged == null)
-                        // {
-                        paths.Add(currentPath);
-                        currentPath = path;
-                        continue;
-                        // }
-                    }
-                }
-
-                merge = true;
-                currentPath = merged;
+                currentPath = path;
+                continue;
             }
 
-            if (currentPath != null)
+            var merged = merge(currentPath, path);
+            if (merged == null)
             {
-                paths.Add(currentPath);
+                mergedPaths.Add(currentPath);
+                currentPath = path;
+                continue;
             }
 
-            toMerge = paths;
-            paths = new List<Path>();
+            hasMerges = true;
+            currentPath = merged;
         }
 
-        return toMerge;
+        if (currentPath != null)
+        {
+            mergedPaths.Add(currentPath);
+        }
+
+        return (mergedPaths, hasMerges);
     }
 
     private static Path? TryAppend(this Path path, Path next)
