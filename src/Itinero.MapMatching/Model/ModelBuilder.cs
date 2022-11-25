@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 using Itinero.Geo;
 using Itinero.Network;
@@ -35,15 +36,17 @@ public class ModelBuilder
     /// </summary>
     /// <param name="track">The track.</param>
     /// <param name="profile">The profile to match with.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>One or more graph models with probabilities as costs.</returns>
-    public async Task<IEnumerable<GraphModel>> BuildModels(Track track, Profile profile)
+    public async Task<IEnumerable<GraphModel>> BuildModels(Track track, Profile profile, CancellationToken cancellationToken = default)
     {
         var models = new List<GraphModel>();
 
         var start = 0;
         while (start < track.Count - 1)
         {
-            var (model, lastUsed) = await this.BuildModel(track, profile, start);
+            var (model, lastUsed) = await this.BuildModel(track, profile, start, cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return ArraySegment<GraphModel>.Empty;
 
             if (lastUsed == start)
             {
@@ -59,7 +62,7 @@ public class ModelBuilder
         return models;
     }
 
-    private async Task<(GraphModel model, int index)> BuildModel(Track track, Profile profile, int start)
+    private async Task<(GraphModel model, int index)> BuildModel(Track track, Profile profile, int start, CancellationToken cancellationToken)
     {
         var model = new GraphModel(track);
 
@@ -94,6 +97,8 @@ public class ModelBuilder
                                })
                                .ToAllAsync(trackPointLocation))
             {
+                if (cancellationToken.IsCancellationRequested) return (new GraphModel(track), start);
+                
                 var cost = trackPointLocation.DistanceEstimateInMeter(snapPoint.LocationOnNetwork(_routingNetwork));
                 if (cost > d) continue;
 
