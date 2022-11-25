@@ -10,13 +10,24 @@ using Itinero.Snapping;
 
 namespace Itinero.MapMatching.Model;
 
+/// <summary>
+/// The model builder.
+/// </summary>
 public class ModelBuilder
 {
     private readonly RoutingNetwork _routingNetwork;
+    private readonly ModelBuilderSettings _settings;
 
-    public ModelBuilder(RoutingNetwork routingNetwork)
+    /// <summary>
+    /// Creates a new model builder.
+    /// </summary>
+    /// <param name="routingNetwork">The routing network.</param>
+    /// <param name="settings">The settings.</param>
+    /// 
+    public ModelBuilder(RoutingNetwork routingNetwork, ModelBuilderSettings? settings = null)
     {
         _routingNetwork = routingNetwork;
+        _settings = settings ?? new ModelBuilderSettings();
     }
 
     /// <summary>
@@ -28,7 +39,7 @@ public class ModelBuilder
     public async Task<IEnumerable<GraphModel>> BuildModels(Track track, Profile profile)
     {
         var models = new List<GraphModel>();
-        
+
         var start = 0;
         while (start < track.Count - 1)
         {
@@ -40,7 +51,7 @@ public class ModelBuilder
                 start++;
                 continue;
             }
-            
+
             models.Add(model);
             start = lastUsed;
         }
@@ -55,14 +66,14 @@ public class ModelBuilder
         // for these parameter see paper in the repo.
 
         // to normalize the edge costs.
-        const double t = 5.0;
+        var t = _settings.MaxDistanceRatio;
         // to normalize the node costs. the default search radius in meter to identity candidate snappings.
-        const int d = 50;
+        var d = _settings.MaxSnappingDistance;
         // ratio between node costs and transition costs
         // 1 = only transition and 0 only node weights.
-        const double alpha = 0.5;
+        double alpha = _settings.TransitionOrSnappingRatio;
 
-        const double beta = alpha / (1 - alpha) * (d / t);
+        double beta = alpha / (1 - alpha) * (d / t);
 
         var previousLayer = new List<int>();
         var startNode = new GraphNode();
@@ -78,8 +89,8 @@ public class ModelBuilder
             var isConnected = false;
             await foreach (var snapPoint in _routingNetwork.Snap().Using(profile, s =>
                                {
-                                   s.OffsetInMeter = 1000;
-                                   s.OffsetInMeterMax = 2000;
+                                   s.OffsetInMeter = 500;
+                                   s.OffsetInMeterMax = 500;
                                })
                                .ToAllAsync(trackPointLocation))
             {

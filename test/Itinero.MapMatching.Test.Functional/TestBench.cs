@@ -83,7 +83,12 @@ internal static class TestBench
 
             try
             {
-                var matcher = routingNetwork.Matcher(profile);
+                var matcher = routingNetwork.Matcher(s =>
+                {
+                    s.Profile = profile;
+                    s.MaxDistanceRatio = 5;
+                    //s.MaxSnappingDistance = 30;
+                });
                 var match = await matcher.MatchAsync(track);
 
                 // check route.
@@ -157,7 +162,7 @@ internal static class TestBench
             track.Add(new TrackPoint(lat, lon));
         }
 
-        return new Track(track, ArraySegment<TrackSegment>.Empty);
+        return new Track(track);
     }
 
     private static Track FromGeoJson(TextReader reader)
@@ -181,6 +186,6 @@ internal static class TestBench
 
         if (track.Count == 0) throw new Exception("No track found.");
 
-        return new Track(track, ArraySegment<TrackSegment>.Empty);
+        return new Track(track);
     }
 }

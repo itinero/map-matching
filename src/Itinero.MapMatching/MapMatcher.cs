@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Itinero.Geo;
 using Itinero.MapMatching.IO.GeoJson;
 using Itinero.MapMatching.Model;
 using Itinero.MapMatching.Solver;
@@ -13,43 +12,58 @@ using Itinero.Network;
 using Itinero.Profiles;
 using Itinero.Routes.Paths;
 using Itinero.Routing;
-using Itinero.Snapping;
 
 [assembly: InternalsVisibleTo("Itinero.MapMatching.Test")]
 [assembly: InternalsVisibleTo("Itinero.MapMatching.Test.Functional")]
 
 namespace Itinero.MapMatching;
 
+/// <summary>
+/// The map matcher.
+/// </summary>
 public class MapMatcher
 {
     private readonly RoutingNetwork _routingNetwork;
     private readonly Profile _profile;
-    private readonly MapMatcherSettings _settings;
     private readonly ModelBuilder _modelBuilder;
     private readonly ModelSolver _modelSolver;
 
+    /// <summary>
+    /// Creates a new map matcher.
+    /// </summary>
+    /// <param name="routingNetwork">The routing network.</param>
+    /// <param name="settings">The settings.</param>
+    /// <exception cref="Exception"></exception>
     public MapMatcher(RoutingNetwork routingNetwork, MapMatcherSettings settings)
     {
-        _settings = settings;
+        this.Settings = settings;
         _routingNetwork = routingNetwork;
-        if (_settings.Profile == null) throw new Exception("No profile set");
-        _profile = settings.Profile;
+        _profile = settings.Profile ?? throw new Exception("No profile set"); ;
 
-        _modelBuilder = new ModelBuilder(routingNetwork);
+        _modelBuilder = new ModelBuilder(routingNetwork, settings.ModelBuilderSettings);
         _modelSolver = new ModelSolver();
     }
 
-    public MapMatcherSettings Settings => _settings;
+    /// <summary>
+    /// The settings.
+    /// </summary>
+    public MapMatcherSettings Settings { get; }
 
     /// <summary>
     /// Gets the routing network.
     /// </summary>
     public RoutingNetwork RoutingNetwork => _routingNetwork;
 
+    /// <summary>
+    /// Matches the given track.
+    /// </summary>
+    /// <param name="track">The track.</param>
+    /// <returns>One or more matched segments.</returns>
+    /// <exception cref="Exception"></exception>
     public async Task<IEnumerable<MapMatch>> MatchAsync(Track track)
     {
         var matches = new List<MapMatch>();
-        
+
         // build track model.
         var trackModels = await _modelBuilder.BuildModels(track, _profile);
 

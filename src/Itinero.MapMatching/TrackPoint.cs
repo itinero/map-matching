@@ -1,5 +1,3 @@
-using System;
-
 namespace Itinero.MapMatching;
 
 /// <summary>
@@ -10,7 +8,8 @@ public readonly struct TrackPoint
     /// <summary>
     /// Creates a new track point.
     /// </summary>
-    /// <param name="location">The location.</param>
+    /// <param name="longitude">The longitude.</param>
+    /// <param name="latitude">The latitude.</param>
     public TrackPoint(double longitude, double latitude)
     {
         this.Location = (longitude, latitude);

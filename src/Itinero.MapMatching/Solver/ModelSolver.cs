@@ -32,7 +32,7 @@ public class ModelSolver
             }
             if (popSuccess == false) break;
             settled.Add((int)node);
-            
+
             if (node == model.LastNode)
             {
                 // TODO: compose final path.
@@ -50,7 +50,7 @@ public class ModelSolver
                 }
                 break;
             }
-            
+
             // add neighbours.
             var graphNode = model.GetNode((int)node);
             var neighbours = model.GetNeighbours((int)node);

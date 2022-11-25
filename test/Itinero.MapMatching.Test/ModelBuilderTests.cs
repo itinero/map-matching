@@ -17,7 +17,7 @@ public class ModelBuilderTests
                 51.27024704344623),
             new TrackPoint(4.785115480803853,
                 51.27048872037136)
-        }, new[] { new TrackSegment(1, ArraySegment<(string key, string value)>.Empty) });
+        });
 
         var routerDb = new RouterDb();
         var writer = routerDb.Latest.GetWriter();

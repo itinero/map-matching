@@ -69,21 +69,21 @@ public static class MapMatcherExtensions
         {
             var (merged1, hasMerges1) = MapMatcherExtensions.MergePaths(current,
                 (p1, p2) => p1.TryAppend(p2));
-        
-            var (merged2, hasMerges2)  = MapMatcherExtensions.MergePaths(merged1, 
+
+            var (merged2, hasMerges2) = MapMatcherExtensions.MergePaths(merged1,
                 (p1, p2) => p1.TryMergeAsUTurn(p2));
             current = merged2;
-            
+
             if (!hasMerges1 && !hasMerges2) break;
         }
-        
+
         return current;
     }
 
     private static (IEnumerable<Path> paths, bool merged) MergePaths(IEnumerable<Path> paths, Func<Path, Path, Path?> merge)
     {
         var mergedPaths = new List<Path>();
-        
+
         Path? currentPath = null;
         var hasMerges = false;
         foreach (var path in paths)

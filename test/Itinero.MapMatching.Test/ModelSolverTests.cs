@@ -11,7 +11,7 @@ public class ModelSolverTests
     [Fact]
     public void ModelSolver_OneEdgeModel()
     {
-        var model = new GraphModel(new Track(ArraySegment<TrackPoint>.Empty, ArraySegment<TrackSegment>.Empty));
+        var model = new GraphModel(new Track(ArraySegment<TrackPoint>.Empty));
 
         var node0 = model.AddNode(new GraphNode());
         var node1 = model.AddNode(new GraphNode()
