@@ -90,12 +90,12 @@ public class ModelBuilder
             var trackPointLayer = new List<int>();
 
             var isConnected = false;
-            await foreach (var snapPoint in _routingNetwork.Snap().Using(profile, s =>
+            await foreach (var snapPoint in _routingNetwork.Snap(profile, s =>
                                {
                                    s.OffsetInMeter = 500;
                                    s.OffsetInMeterMax = 500;
                                })
-                               .ToAllAsync(trackPointLocation))
+                               .ToAllAsync(trackPointLocation.longitude, trackPointLocation.latitude, cancellationToken: cancellationToken))
             {
                 if (cancellationToken.IsCancellationRequested) return (new GraphModel(track), start);
                 
@@ -136,7 +136,7 @@ public class ModelBuilder
                         else
                         {
                             routeDistance = await this.RouteDistanceAsync(previousSnapPoint.Value,
-                                snapPoint, profile, System.Math.Min(distance * t, 100));
+                                snapPoint, profile, distance * t);
                             if (routeDistance == null) continue;
 
                             c = routeDistance.Value / distance;
@@ -198,10 +198,10 @@ public class ModelBuilder
     private async Task<double?> RouteDistanceAsync(SnapPoint snapPoint1, SnapPoint snapPoint2, Profile profile,
         double maxDistance)
     {
-        var route = await _routingNetwork.Route(new RoutingSettings() { MaxDistance = maxDistance, Profile = profile })
-            .From(snapPoint1).To(snapPoint2).CalculateAsync();
-        if (route.IsError) return null;
+        var path = await _routingNetwork.Route(new RoutingSettings() { MaxDistance = maxDistance, Profile = profile })
+            .From(snapPoint1).To(snapPoint2).Path(CancellationToken.None);
+        if (path.IsError) return null;
 
-        return route.Value.TotalDistance;
+        return path.Value.LengthInMeter();
     }
 }

@@ -1,9 +1,55 @@
+using Itinero.Network.Enumerators.Edges;
 using Itinero.Routes.Paths;
 
 namespace Itinero.MapMatching;
 
 internal static class PathExtensions
 {
+    /// <summary>
+    /// Returns the length of a path in meters.
+    /// </summary>
+    /// <param name="path"></param>
+    /// <returns></returns>
+    public static double LengthInMeter(this Path path)
+    {
+        var edgeEnumerator = path.RoutingNetwork.GetEdgeEnumerator();
+
+        var length = 0.0;
+        foreach (var (edge, forward, offset1, offset2) in path)
+        {
+            edgeEnumerator.MoveTo(edge, forward);
+
+            var edgeLength = 0.0;
+            if (edgeEnumerator.Length.HasValue)
+            {
+                edgeLength += edgeEnumerator.Length.Value / 100.0;
+            }
+            else
+            {
+                edgeLength = edgeEnumerator.EdgeLength();
+            }
+
+            if (offset1 != 0)
+            {
+                edgeLength -= OffsetFactor(offset1) * edgeLength;
+            }
+
+            if (offset2 != ushort.MaxValue)
+            {
+                edgeLength -= (1.0 - OffsetFactor(offset2)) * edgeLength;
+            }
+
+            length += edgeLength;
+        }
+
+        return length;
+    }
+    
+    private static double OffsetFactor(ushort offset)
+    {
+        return offset / (double)ushort.MaxValue;
+    }
+    
     /// <summary>
     /// The transition from path1 to path2 represents a u-turn.
     /// </summary>

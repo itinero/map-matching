@@ -28,7 +28,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Itinero" Version="2.0.0-alpha-069" />
+    <PackageReference Include="Itinero" Version="2.0.0-alpha-080" />
   </ItemGroup>
 
 </Project>

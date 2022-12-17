@@ -9,7 +9,7 @@ public class ModelBuilderSettings
     /// <summary>
     /// The maximum distance ratio between great circle distance and the route distance between two samples.
     /// </summary>
-    public double MaxDistanceRatio { get; set; } = 5.0;
+    public double MaxDistanceRatio { get; set; } = 3.0;
 
     /// <summary>
     /// The maximum distance between a sample and a potential snapping point.
